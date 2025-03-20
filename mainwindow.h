@@ -8,7 +8,9 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QGraphicsItem>
-
+#include <QColorDialog>
+#include <QToolBar>
+#include <QSpinBox>
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -23,6 +25,11 @@ public:
     explicit DragDropImageLabel(QWidget *parent = nullptr);
     void setOriginalPixmap(const QPixmap &pixmap);
     QPixmap getPixmap() const { return originalPixmap; }
+    // Add this declaration to DragDropImageLabel class in mainwindow.h
+public:
+    QColor getSelectedShapeColor() const;
+    int getSelectedShapeBorderWidth() const;
+    bool hasSelectedShape() const { return selectedShapeIndex >= 0; }
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
@@ -48,13 +55,17 @@ public:
     void deleteSelectedShape();
     void setShapeColor(const QColor &color);
     void setBorderWidth(int width);
-
+    // Add to DragDropImageLabel class in mainwindow.h:
+    signals:
+        void selectionChanged();
 private:
     struct Shape {
         QString type;
-        qreal xPercent;   // 相对于图片宽度的百分比位置 (0.0-1.0)
-        qreal yPercent;   // 相对于图片高度的百分比位置 (0.0-1.0)
-        qreal sizePercent; // 相对于图片最小边的百分比大小 (0.0-1.0)
+        qreal xPercent;      // 相对于图片宽度的百分比位置 (0.0-1.0)
+        qreal yPercent;      // 相对于图片高度的百分比位置 (0.0-1.0)
+        qreal sizePercent;   // 相对于图片最小边的百分比大小 (0.0-1.0)
+        QColor color;        // 形状的颜色
+        int borderWidth;     // 形状的线宽
     };
     QList<Shape> shapes; // 存储形状及其相对位置
     QPixmap originalPixmap;
@@ -90,5 +101,10 @@ private:
     QDockWidget *shapesDock;
     QListWidget *shapesListWidget;
     QPixmap createShapeIcon(const QString &shape);
+
+    // Add this to MainWindow class in mainwindow.h
+private:
+    QSpinBox *widthSpinBox;
+    void updatePropertyControls();
 };
 #endif // MAINWINDOW_H

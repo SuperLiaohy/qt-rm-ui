@@ -122,91 +122,21 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
     shape.xPercent = relX / originalPixmap.width();
     shape.yPercent = relY / originalPixmap.height();
     shape.sizePercent = 0.05; // 使用固定大小比例
+
+    // 设置默认颜色和线宽
+    if (shape.type == "圆形") {
+        shape.color = Qt::red;
+    } else if (shape.type == "矩形") {
+        shape.color = Qt::blue;
+    }
+    shape.borderWidth = 2; // 默认线宽
+
     shapes.append(shape);
 
     update();
     event->acceptProposedAction();
 }
 
-// Add mouse event handlers to DragDropImageLabel
-void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
-{
-    if (originalPixmap.isNull())
-        return;
-
-    // Calculate scaled image position and size
-    QSize scaledSize = originalPixmap.size();
-    scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
-    int x = (width() - scaledSize.width()) / 2;
-    int y = (height() - scaledSize.height()) / 2;
-
-    double scaleX = (double)scaledSize.width() / originalPixmap.width();
-    double scaleY = (double)scaledSize.height() / originalPixmap.height();
-
-    // Check if click is on any shape
-    for (int i = shapes.size() - 1; i >= 0; i--) { // Check from top to bottom (last drawn first)
-        const auto &shape = shapes[i];
-
-        int imgX = x + shape.xPercent * originalPixmap.width() * scaleX;
-        int imgY = y + shape.yPercent * originalPixmap.height() * scaleY;
-
-        int minDimension = qMin(originalPixmap.width(), originalPixmap.height());
-        int shapeSize = shape.sizePercent * minDimension * scaleX;
-
-        QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
-
-        if (shapeRect.contains(event->pos())) {
-            selectedShapeIndex = i;
-            isDraggingShape = true;
-            dragStartPos = event->pos();
-            update();
-            return;
-        }
-    }
-
-    // If click is not on any shape, deselect
-    selectedShapeIndex = -1;
-    isDraggingShape = false;
-    update();
-}
-
-void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
-{
-    if (isDraggingShape && selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
-        // Calculate scaled image position and size
-        QSize scaledSize = originalPixmap.size();
-        scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
-        int x = (width() - scaledSize.width()) / 2;
-        int y = (height() - scaledSize.height()) / 2;
-
-        // Calculate how much the mouse has moved
-        QPoint delta = event->pos() - dragStartPos;
-
-        // Convert the delta to image coordinates
-        double scaleX = (double)originalPixmap.width() / scaledSize.width();
-        double scaleY = (double)originalPixmap.height() / scaledSize.height();
-
-        // Update the shape's position (as percentage of image size)
-        shapes[selectedShapeIndex].xPercent += delta.x() * scaleX / originalPixmap.width();
-        shapes[selectedShapeIndex].yPercent += delta.y() * scaleY / originalPixmap.height();
-
-        // Limit the position to stay within the image bounds
-        shapes[selectedShapeIndex].xPercent = qBound(0.0, shapes[selectedShapeIndex].xPercent, 1.0);
-        shapes[selectedShapeIndex].yPercent = qBound(0.0, shapes[selectedShapeIndex].yPercent, 1.0);
-
-        // Update the drag start position
-        dragStartPos = event->pos();
-
-        update();
-    }
-}
-
-void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event)
-{
-    isDraggingShape = false;
-}
-
-// Modified paintEvent to highlight selected shape
 void DragDropImageLabel::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
@@ -244,9 +174,6 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
 
         QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
 
-        // Use specified colors
-        QColor shapeColor = (shape.type == "圆形") ? circleColor : rectangleColor;
-
         // Highlight selected shape
         if (i == selectedShapeIndex) {
             // Draw selection indicator
@@ -254,9 +181,9 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
             painter.drawRect(shapeRect.adjusted(-3, -3, 3, 3));
 
             // Draw the shape with a slightly different color
-            painter.setPen(QPen(shapeColor.darker(120), borderWidth));
+            painter.setPen(QPen(shape.color.darker(120), shape.borderWidth));
         } else {
-            painter.setPen(QPen(shapeColor, borderWidth));
+            painter.setPen(QPen(shape.color, shape.borderWidth));
         }
 
         if (shape.type == "圆形") {
@@ -266,6 +193,94 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
         }
     }
 }
+
+// Add mouse event handlers to DragDropImageLabel
+void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
+{
+    if (originalPixmap.isNull())
+        return;
+
+    int oldSelection = selectedShapeIndex;
+
+    // Calculate scaled image position and size
+    QSize scaledSize = originalPixmap.size();
+    scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
+    int x = (width() - scaledSize.width()) / 2;
+    int y = (height() - scaledSize.height()) / 2;
+
+    double scaleX = (double)scaledSize.width() / originalPixmap.width();
+    double scaleY = (double)scaledSize.height() / originalPixmap.height();
+
+    // Check if click is on any shape
+    for (int i = shapes.size() - 1; i >= 0; i--) { // Check from top to bottom (last drawn first)
+        const auto &shape = shapes[i];
+
+        int imgX = x + shape.xPercent * originalPixmap.width() * scaleX;
+        int imgY = y + shape.yPercent * originalPixmap.height() * scaleY;
+
+        int minDimension = qMin(originalPixmap.width(), originalPixmap.height());
+        int shapeSize = shape.sizePercent * minDimension * scaleX;
+
+        QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
+
+        if (shapeRect.contains(event->pos())) {
+            selectedShapeIndex = i;
+            isDraggingShape = true;
+            dragStartPos = event->pos();
+            update();
+
+            if (oldSelection != selectedShapeIndex) {
+                emit selectionChanged();
+            }
+            return;
+        }
+    }
+
+    // If click is not on any shape, deselect
+    selectedShapeIndex = -1;
+    isDraggingShape = false;
+    update();
+
+    if (oldSelection != selectedShapeIndex) {
+        emit selectionChanged();
+    }
+}
+void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
+{
+    if (isDraggingShape && selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        // Calculate scaled image position and size
+        QSize scaledSize = originalPixmap.size();
+        scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
+        int x = (width() - scaledSize.width()) / 2;
+        int y = (height() - scaledSize.height()) / 2;
+
+        // Calculate how much the mouse has moved
+        QPoint delta = event->pos() - dragStartPos;
+
+        // Convert the delta to image coordinates
+        double scaleX = (double)originalPixmap.width() / scaledSize.width();
+        double scaleY = (double)originalPixmap.height() / scaledSize.height();
+
+        // Update the shape's position (as percentage of image size)
+        shapes[selectedShapeIndex].xPercent += delta.x() * scaleX / originalPixmap.width();
+        shapes[selectedShapeIndex].yPercent += delta.y() * scaleY / originalPixmap.height();
+
+        // Limit the position to stay within the image bounds
+        shapes[selectedShapeIndex].xPercent = qBound(0.0, shapes[selectedShapeIndex].xPercent, 1.0);
+        shapes[selectedShapeIndex].yPercent = qBound(0.0, shapes[selectedShapeIndex].yPercent, 1.0);
+
+        // Update the drag start position
+        dragStartPos = event->pos();
+
+        update();
+    }
+}
+
+void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event)
+{
+    isDraggingShape = false;
+}
+
 
 // Methods to manipulate selected shape
 void DragDropImageLabel::deleteSelectedShape()
@@ -280,19 +295,34 @@ void DragDropImageLabel::deleteSelectedShape()
 void DragDropImageLabel::setShapeColor(const QColor &color)
 {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
-        if (shapes[selectedShapeIndex].type == "圆形") {
-            circleColor = color;
-        } else if (shapes[selectedShapeIndex].type == "矩形") {
-            rectangleColor = color;
-        }
+        shapes[selectedShapeIndex].color = color;
         update();
     }
 }
 
 void DragDropImageLabel::setBorderWidth(int width)
 {
-    borderWidth = width;
-    update();
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        shapes[selectedShapeIndex].borderWidth = width;
+        update();
+    }
+}
+
+// Implementation in mainwindow.cpp
+QColor DragDropImageLabel::getSelectedShapeColor() const
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        return shapes[selectedShapeIndex].color;
+    }
+    return Qt::black; // Default color if no shape selected
+}
+
+int DragDropImageLabel::getSelectedShapeBorderWidth() const
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        return shapes[selectedShapeIndex].borderWidth;
+    }
+    return 2; // Default width if no shape selected
 }
 
 
@@ -412,44 +442,6 @@ void MainWindow::on_actionOpen_triggered(){
     setWindowTitle(tr("Qt5 Image Viewer - %1").arg(QFileInfo(fileName).fileName()));
 }
 
-// void MainWindow::createShapeToolbar()
-// {
-//     // 创建停靠窗口
-//     shapesDock = new QDockWidget(tr("形状工具"), this);
-//     shapesDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-//     shapesDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-//
-//     // 使用自定义列表部件
-//     shapesListWidget = new ShapeListWidget(shapesDock);
-//     shapesListWidget->setDragEnabled(true);
-//     shapesListWidget->setViewMode(QListWidget::IconMode);
-//     shapesListWidget->setIconSize(QSize(40, 40));
-//     shapesListWidget->setSpacing(10);
-//
-//     // 添加形状项
-//     auto *circleItem = new ShapeListItem(tr("圆形"), shapesListWidget);
-//     QPixmap circleIcon(40, 40);
-//     circleIcon.fill(Qt::transparent);
-//     QPainter circlePainter(&circleIcon);
-//     circlePainter.setRenderHint(QPainter::Antialiasing);
-//     circlePainter.setPen(QPen(Qt::red, 2));
-//     circlePainter.drawEllipse(5, 5, 30, 30);
-//     circleItem->setIcon(QIcon(circleIcon));
-//
-//     auto *rectItem = new ShapeListItem(tr("矩形"), shapesListWidget);
-//     QPixmap rectIcon(40, 40);
-//     rectIcon.fill(Qt::transparent);
-//     QPainter rectPainter(&rectIcon);
-//     rectPainter.setPen(QPen(Qt::blue, 2));
-//     rectPainter.drawRect(5, 5, 30, 30);
-//     rectItem->setIcon(QIcon(rectIcon));
-//
-//     // 设置列表部件为停靠窗口的内容
-//     shapesDock->setWidget(shapesListWidget);
-//
-//     // 将停靠窗口添加到主窗口的右侧
-//     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
-// }
 
 // 创建形状图标的辅助函数
 QPixmap MainWindow::createShapeIcon(const QString &shape)
@@ -470,6 +462,10 @@ QPixmap MainWindow::createShapeIcon(const QString &shape)
 
     return pixmap;
 }
+
+
+
+// Implementation in mainwindow.cpp
 void MainWindow::createShapeToolbar()
 {
     // 创建停靠窗口
@@ -508,6 +504,27 @@ void MainWindow::createShapeToolbar()
     // 将停靠窗口添加到主窗口的右侧
     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
     // Add property controls
+    // QToolBar *propertiesToolbar = addToolBar(tr("形状属性"));
+    //
+    // QAction *deleteAction = propertiesToolbar->addAction(tr("删除"));
+    // connect(deleteAction, &QAction::triggered, this, &MainWindow::deleteSelectedShape);
+    //
+    // QAction *colorAction = propertiesToolbar->addAction(tr("更改颜色"));
+    // connect(colorAction, &QAction::triggered, this, &MainWindow::changeShapeColor);
+    //
+    // propertiesToolbar->addSeparator();
+    //
+    // QLabel *widthLabel = new QLabel(tr("线宽: "));
+    // propertiesToolbar->addWidget(widthLabel);
+    //
+    // QSpinBox *widthSpinBox = new QSpinBox();
+    // widthSpinBox->setRange(1, 10);
+    // widthSpinBox->setValue(2);
+    // propertiesToolbar->addWidget(widthSpinBox);
+    //
+    // connect(widthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+    //         this, &MainWindow::changeBorderWidth);
+    // Add property controls
     QToolBar *propertiesToolbar = addToolBar(tr("形状属性"));
 
     QAction *deleteAction = propertiesToolbar->addAction(tr("删除"));
@@ -521,13 +538,38 @@ void MainWindow::createShapeToolbar()
     QLabel *widthLabel = new QLabel(tr("线宽: "));
     propertiesToolbar->addWidget(widthLabel);
 
-    QSpinBox *widthSpinBox = new QSpinBox();
+    widthSpinBox = new QSpinBox();
     widthSpinBox->setRange(1, 10);
     widthSpinBox->setValue(2);
     propertiesToolbar->addWidget(widthSpinBox);
 
     connect(widthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &MainWindow::changeBorderWidth);
+
+    // Connect selection changes to update property controls
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    connect(imageLabel, &DragDropImageLabel::selectionChanged,
+            this, &MainWindow::updatePropertyControls);
+}
+
+void MainWindow::updatePropertyControls()
+{
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel && imageLabel->hasSelectedShape()) {
+        widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
+    }
+}
+
+void MainWindow::changeShapeColor()
+{
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel && imageLabel->hasSelectedShape()) {
+        QColor initialColor = imageLabel->getSelectedShapeColor();
+        QColor color = QColorDialog::getColor(initialColor, this, tr("选择颜色"));
+        if (color.isValid()) {
+            imageLabel->setShapeColor(color);
+        }
+    }
 }
 
 void MainWindow::deleteSelectedShape()
@@ -538,16 +580,16 @@ void MainWindow::deleteSelectedShape()
     }
 }
 
-void MainWindow::changeShapeColor()
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
-    if (imageLabel) {
-        QColor color = QColorDialog::getColor(Qt::red, this, tr("选择颜色"));
-        if (color.isValid()) {
-            imageLabel->setShapeColor(color);
-        }
-    }
-}
+// void MainWindow::changeShapeColor()
+// {
+//     auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+//     if (imageLabel) {
+//         QColor color = QColorDialog::getColor(Qt::red, this, tr("选择颜色"));
+//         if (color.isValid()) {
+//             imageLabel->setShapeColor(color);
+//         }
+//     }
+// }
 
 void MainWindow::changeBorderWidth(int width)
 {
