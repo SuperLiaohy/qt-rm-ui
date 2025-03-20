@@ -9,6 +9,10 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QDrag>
+#include <QMouseEvent>
+#include <QColorDialog>
+#include <QToolBar>
+#include <QSpinBox>
 // DragDropImageLabel 实现
 DragDropImageLabel::DragDropImageLabel(QWidget *parent) : QLabel(parent)
 {
@@ -34,54 +38,54 @@ void DragDropImageLabel::dragEnterEvent(QDragEnterEvent *event)
 }
 
 
-void DragDropImageLabel::paintEvent(QPaintEvent *event)
-{
-    QPainter painter(this);
-    painter.fillRect(rect(), QColor(240, 240, 240)); // 背景色
-
-    if (originalPixmap.isNull()) {
-        QLabel::paintEvent(event);
-        return;
-    }
-
-    // 计算适合窗口的缩放尺寸，保持宽高比
-    QSize scaledSize = originalPixmap.size();
-    scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
-
-    // 计算图片居中位置
-    int x = (width() - scaledSize.width()) / 2;
-    int y = (height() - scaledSize.height()) / 2;
-
-    // 绘制缩放后的图片
-    painter.drawPixmap(x, y, scaledSize.width(), scaledSize.height(), originalPixmap);
-
-    // 计算缩放比例
-    double scaleX = (double)scaledSize.width() / originalPixmap.width();
-    double scaleY = (double)scaledSize.height() / originalPixmap.height();
-
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    // 绘制所有形状
-    for (const auto &shape : shapes) {
-        // 计算形状在缩放后图片上的位置
-        int imgX = x + shape.xPercent * originalPixmap.width() * scaleX;
-        int imgY = y + shape.yPercent * originalPixmap.height() * scaleY;
-
-        // 计算形状大小（也要缩放）
-        int minDimension = qMin(originalPixmap.width(), originalPixmap.height());
-        int shapeSize = shape.sizePercent * minDimension * scaleX;
-
-        QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
-
-        if (shape.type == "圆形") {
-            painter.setPen(QPen(Qt::red, 2));
-            painter.drawEllipse(shapeRect);
-        } else if (shape.type == "矩形") {
-            painter.setPen(QPen(Qt::blue, 2));
-            painter.drawRect(shapeRect);
-        }
-    }
-}
+// void DragDropImageLabel::paintEvent(QPaintEvent *event)
+// {
+//     QPainter painter(this);
+//     painter.fillRect(rect(), QColor(240, 240, 240)); // 背景色
+//
+//     if (originalPixmap.isNull()) {
+//         QLabel::paintEvent(event);
+//         return;
+//     }
+//
+//     // 计算适合窗口的缩放尺寸，保持宽高比
+//     QSize scaledSize = originalPixmap.size();
+//     scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
+//
+//     // 计算图片居中位置
+//     int x = (width() - scaledSize.width()) / 2;
+//     int y = (height() - scaledSize.height()) / 2;
+//
+//     // 绘制缩放后的图片
+//     painter.drawPixmap(x, y, scaledSize.width(), scaledSize.height(), originalPixmap);
+//
+//     // 计算缩放比例
+//     double scaleX = (double)scaledSize.width() / originalPixmap.width();
+//     double scaleY = (double)scaledSize.height() / originalPixmap.height();
+//
+//     painter.setRenderHint(QPainter::Antialiasing);
+//
+//     // 绘制所有形状
+//     for (const auto &shape : shapes) {
+//         // 计算形状在缩放后图片上的位置
+//         int imgX = x + shape.xPercent * originalPixmap.width() * scaleX;
+//         int imgY = y + shape.yPercent * originalPixmap.height() * scaleY;
+//
+//         // 计算形状大小（也要缩放）
+//         int minDimension = qMin(originalPixmap.width(), originalPixmap.height());
+//         int shapeSize = shape.sizePercent * minDimension * scaleX;
+//
+//         QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
+//
+//         if (shape.type == "圆形") {
+//             painter.setPen(QPen(Qt::red, 2));
+//             painter.drawEllipse(shapeRect);
+//         } else if (shape.type == "矩形") {
+//             painter.setPen(QPen(Qt::blue, 2));
+//             painter.drawRect(shapeRect);
+//         }
+//     }
+// }
 
 void DragDropImageLabel::dropEvent(QDropEvent *event)
 {
@@ -123,6 +127,176 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
     update();
     event->acceptProposedAction();
 }
+
+// Add mouse event handlers to DragDropImageLabel
+void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
+{
+    if (originalPixmap.isNull())
+        return;
+
+    // Calculate scaled image position and size
+    QSize scaledSize = originalPixmap.size();
+    scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
+    int x = (width() - scaledSize.width()) / 2;
+    int y = (height() - scaledSize.height()) / 2;
+
+    double scaleX = (double)scaledSize.width() / originalPixmap.width();
+    double scaleY = (double)scaledSize.height() / originalPixmap.height();
+
+    // Check if click is on any shape
+    for (int i = shapes.size() - 1; i >= 0; i--) { // Check from top to bottom (last drawn first)
+        const auto &shape = shapes[i];
+
+        int imgX = x + shape.xPercent * originalPixmap.width() * scaleX;
+        int imgY = y + shape.yPercent * originalPixmap.height() * scaleY;
+
+        int minDimension = qMin(originalPixmap.width(), originalPixmap.height());
+        int shapeSize = shape.sizePercent * minDimension * scaleX;
+
+        QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
+
+        if (shapeRect.contains(event->pos())) {
+            selectedShapeIndex = i;
+            isDraggingShape = true;
+            dragStartPos = event->pos();
+            update();
+            return;
+        }
+    }
+
+    // If click is not on any shape, deselect
+    selectedShapeIndex = -1;
+    isDraggingShape = false;
+    update();
+}
+
+void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
+{
+    if (isDraggingShape && selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        // Calculate scaled image position and size
+        QSize scaledSize = originalPixmap.size();
+        scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
+        int x = (width() - scaledSize.width()) / 2;
+        int y = (height() - scaledSize.height()) / 2;
+
+        // Calculate how much the mouse has moved
+        QPoint delta = event->pos() - dragStartPos;
+
+        // Convert the delta to image coordinates
+        double scaleX = (double)originalPixmap.width() / scaledSize.width();
+        double scaleY = (double)originalPixmap.height() / scaledSize.height();
+
+        // Update the shape's position (as percentage of image size)
+        shapes[selectedShapeIndex].xPercent += delta.x() * scaleX / originalPixmap.width();
+        shapes[selectedShapeIndex].yPercent += delta.y() * scaleY / originalPixmap.height();
+
+        // Limit the position to stay within the image bounds
+        shapes[selectedShapeIndex].xPercent = qBound(0.0, shapes[selectedShapeIndex].xPercent, 1.0);
+        shapes[selectedShapeIndex].yPercent = qBound(0.0, shapes[selectedShapeIndex].yPercent, 1.0);
+
+        // Update the drag start position
+        dragStartPos = event->pos();
+
+        update();
+    }
+}
+
+void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event)
+{
+    isDraggingShape = false;
+}
+
+// Modified paintEvent to highlight selected shape
+void DragDropImageLabel::paintEvent(QPaintEvent *event)
+{
+    QPainter painter(this);
+    painter.fillRect(rect(), QColor(240, 240, 240)); // Background
+
+    if (originalPixmap.isNull()) {
+        QLabel::paintEvent(event);
+        return;
+    }
+
+    // Calculate scaled image position and size
+    QSize scaledSize = originalPixmap.size();
+    scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
+    int x = (width() - scaledSize.width()) / 2;
+    int y = (height() - scaledSize.height()) / 2;
+
+    // Draw scaled image
+    painter.drawPixmap(x, y, scaledSize.width(), scaledSize.height(), originalPixmap);
+
+    // Calculate scale factors
+    double scaleX = (double)scaledSize.width() / originalPixmap.width();
+    double scaleY = (double)scaledSize.height() / originalPixmap.height();
+
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // Draw all shapes
+    for (int i = 0; i < shapes.size(); i++) {
+        const auto &shape = shapes[i];
+
+        int imgX = x + shape.xPercent * originalPixmap.width() * scaleX;
+        int imgY = y + shape.yPercent * originalPixmap.height() * scaleY;
+
+        int minDimension = qMin(originalPixmap.width(), originalPixmap.height());
+        int shapeSize = shape.sizePercent * minDimension * scaleX;
+
+        QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
+
+        // Use specified colors
+        QColor shapeColor = (shape.type == "圆形") ? circleColor : rectangleColor;
+
+        // Highlight selected shape
+        if (i == selectedShapeIndex) {
+            // Draw selection indicator
+            painter.setPen(QPen(Qt::black, 1, Qt::DashLine));
+            painter.drawRect(shapeRect.adjusted(-3, -3, 3, 3));
+
+            // Draw the shape with a slightly different color
+            painter.setPen(QPen(shapeColor.darker(120), borderWidth));
+        } else {
+            painter.setPen(QPen(shapeColor, borderWidth));
+        }
+
+        if (shape.type == "圆形") {
+            painter.drawEllipse(shapeRect);
+        } else if (shape.type == "矩形") {
+            painter.drawRect(shapeRect);
+        }
+    }
+}
+
+// Methods to manipulate selected shape
+void DragDropImageLabel::deleteSelectedShape()
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        shapes.removeAt(selectedShapeIndex);
+        selectedShapeIndex = -1; // Deselect after deletion
+        update();
+    }
+}
+
+void DragDropImageLabel::setShapeColor(const QColor &color)
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        if (shapes[selectedShapeIndex].type == "圆形") {
+            circleColor = color;
+        } else if (shapes[selectedShapeIndex].type == "矩形") {
+            rectangleColor = color;
+        }
+        update();
+    }
+}
+
+void DragDropImageLabel::setBorderWidth(int width)
+{
+    borderWidth = width;
+    update();
+}
+
+
+
 
 class ShapeListWidget : public QListWidget
 {
@@ -238,6 +412,64 @@ void MainWindow::on_actionOpen_triggered(){
     setWindowTitle(tr("Qt5 Image Viewer - %1").arg(QFileInfo(fileName).fileName()));
 }
 
+// void MainWindow::createShapeToolbar()
+// {
+//     // 创建停靠窗口
+//     shapesDock = new QDockWidget(tr("形状工具"), this);
+//     shapesDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+//     shapesDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+//
+//     // 使用自定义列表部件
+//     shapesListWidget = new ShapeListWidget(shapesDock);
+//     shapesListWidget->setDragEnabled(true);
+//     shapesListWidget->setViewMode(QListWidget::IconMode);
+//     shapesListWidget->setIconSize(QSize(40, 40));
+//     shapesListWidget->setSpacing(10);
+//
+//     // 添加形状项
+//     auto *circleItem = new ShapeListItem(tr("圆形"), shapesListWidget);
+//     QPixmap circleIcon(40, 40);
+//     circleIcon.fill(Qt::transparent);
+//     QPainter circlePainter(&circleIcon);
+//     circlePainter.setRenderHint(QPainter::Antialiasing);
+//     circlePainter.setPen(QPen(Qt::red, 2));
+//     circlePainter.drawEllipse(5, 5, 30, 30);
+//     circleItem->setIcon(QIcon(circleIcon));
+//
+//     auto *rectItem = new ShapeListItem(tr("矩形"), shapesListWidget);
+//     QPixmap rectIcon(40, 40);
+//     rectIcon.fill(Qt::transparent);
+//     QPainter rectPainter(&rectIcon);
+//     rectPainter.setPen(QPen(Qt::blue, 2));
+//     rectPainter.drawRect(5, 5, 30, 30);
+//     rectItem->setIcon(QIcon(rectIcon));
+//
+//     // 设置列表部件为停靠窗口的内容
+//     shapesDock->setWidget(shapesListWidget);
+//
+//     // 将停靠窗口添加到主窗口的右侧
+//     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
+// }
+
+// 创建形状图标的辅助函数
+QPixmap MainWindow::createShapeIcon(const QString &shape)
+{
+    QPixmap pixmap(40, 40);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    if (shape == "圆形") {
+        painter.setPen(QPen(Qt::red, 2));
+        painter.drawEllipse(5, 5, 30, 30);
+    } else if (shape == "矩形") {
+        painter.setPen(QPen(Qt::blue, 2));
+        painter.drawRect(5, 5, 30, 30);
+    }
+
+    return pixmap;
+}
 void MainWindow::createShapeToolbar()
 {
     // 创建停靠窗口
@@ -275,24 +507,52 @@ void MainWindow::createShapeToolbar()
 
     // 将停靠窗口添加到主窗口的右侧
     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
+    // Add property controls
+    QToolBar *propertiesToolbar = addToolBar(tr("形状属性"));
+
+    QAction *deleteAction = propertiesToolbar->addAction(tr("删除"));
+    connect(deleteAction, &QAction::triggered, this, &MainWindow::deleteSelectedShape);
+
+    QAction *colorAction = propertiesToolbar->addAction(tr("更改颜色"));
+    connect(colorAction, &QAction::triggered, this, &MainWindow::changeShapeColor);
+
+    propertiesToolbar->addSeparator();
+
+    QLabel *widthLabel = new QLabel(tr("线宽: "));
+    propertiesToolbar->addWidget(widthLabel);
+
+    QSpinBox *widthSpinBox = new QSpinBox();
+    widthSpinBox->setRange(1, 10);
+    widthSpinBox->setValue(2);
+    propertiesToolbar->addWidget(widthSpinBox);
+
+    connect(widthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeBorderWidth);
 }
 
-// 创建形状图标的辅助函数
-QPixmap MainWindow::createShapeIcon(const QString &shape)
+void MainWindow::deleteSelectedShape()
 {
-    QPixmap pixmap(40, 40);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    if (shape == "圆形") {
-        painter.setPen(QPen(Qt::red, 2));
-        painter.drawEllipse(5, 5, 30, 30);
-    } else if (shape == "矩形") {
-        painter.setPen(QPen(Qt::blue, 2));
-        painter.drawRect(5, 5, 30, 30);
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel) {
+        imageLabel->deleteSelectedShape();
     }
+}
 
-    return pixmap;
+void MainWindow::changeShapeColor()
+{
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel) {
+        QColor color = QColorDialog::getColor(Qt::red, this, tr("选择颜色"));
+        if (color.isValid()) {
+            imageLabel->setShapeColor(color);
+        }
+    }
+}
+
+void MainWindow::changeBorderWidth(int width)
+{
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel) {
+        imageLabel->setBorderWidth(width);
+    }
 }

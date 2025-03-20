@@ -27,7 +27,27 @@ public:
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
+
+    void mousePressEvent(QMouseEvent *event);
+
+    void mouseMoveEvent(QMouseEvent *event);
+
+    void mouseReleaseEvent(QMouseEvent *event);
+
     void paintEvent(QPaintEvent *event) override;
+
+private:
+    int selectedShapeIndex = -1; // -1 means no shape selected
+    bool isDraggingShape = false;
+    QPoint dragStartPos;
+    QColor circleColor = Qt::red;
+    QColor rectangleColor = Qt::blue;
+    int borderWidth = 2;
+
+public:
+    void deleteSelectedShape();
+    void setShapeColor(const QColor &color);
+    void setBorderWidth(int width);
 
 private:
     struct Shape {
@@ -60,6 +80,9 @@ public:
 private slots:
     void on_actionOpen_triggered();
     void createShapeToolbar();
+    void deleteSelectedShape();
+    void changeShapeColor();
+    void changeBorderWidth(int width);
 
 private:
     Ui::MainWindow *ui;
