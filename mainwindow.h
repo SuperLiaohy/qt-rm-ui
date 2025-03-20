@@ -30,8 +30,15 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
+    struct Shape {
+        QString type;
+        qreal xPercent;   // 相对于图片宽度的百分比位置 (0.0-1.0)
+        qreal yPercent;   // 相对于图片高度的百分比位置 (0.0-1.0)
+        qreal sizePercent; // 相对于图片最小边的百分比大小 (0.0-1.0)
+    };
+    QList<Shape> shapes; // 存储形状及其相对位置
     QPixmap originalPixmap;
-    QList<QPair<QString, QRect>> shapes; // 存储形状及其位置
+    // QList<QPair<QString, QRect>> shapes; // 存储形状及其位置
 };
 
 // 自定义列表项，用于表示可拖动的图形

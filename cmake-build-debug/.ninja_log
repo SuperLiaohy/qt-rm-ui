@@ -1,0 +1,12 @@
+# ninja log v6
+1	136	1742488961125657391	/home/liaohy/QtDemo/rm_ui/cmake-build-debug/CMakeFiles/cmake.verify_globs	8e0bba0347b223f3
+123	281	1742486382666040351	build.ninja	a69ab85665cc5ff8
+137	146	1742488961261656666	rm_ui_autogen/timestamp	71b37444ace52407
+137	146	1742488961261656666	/home/liaohy/QtDemo/rm_ui/cmake-build-debug/rm_ui_autogen/mocs_compilation.cpp	71b37444ace52407
+1332	1588	1742488962456650292	rm_ui	705be89da6d13501
+137	146	1742488961261656666	rm_ui_autogen/mocs_compilation.cpp	71b37444ace52407
+137	146	1742488961261656666	/home/liaohy/QtDemo/rm_ui/cmake-build-debug/rm_ui_autogen/timestamp	71b37444ace52407
+267	1264	1742487844941043079	CMakeFiles/rm_ui.dir/rm_ui_autogen/mocs_compilation.cpp.o	baee87c6f98f3102
+267	1285	1742487844941043079	CMakeFiles/rm_ui.dir/main.cpp.o	bb92c3b0fb2af822
+146	1332	1742488961270656618	CMakeFiles/rm_ui.dir/mainwindow.cpp.o	a88777c46d394bb2
+1	115	1742488963501644709	/home/liaohy/QtDemo/rm_ui/cmake-build-debug/CMakeFiles/cmake.verify_globs	8e0bba0347b223f3
