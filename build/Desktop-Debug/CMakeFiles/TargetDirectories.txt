@@ -1,0 +1,9 @@
+/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug/CMakeFiles/rm_ui.dir
+/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug/CMakeFiles/edit_cache.dir
+/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug/CMakeFiles/rebuild_cache.dir
+/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug/CMakeFiles/list_install_components.dir
+/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug/CMakeFiles/install.dir
+/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug/CMakeFiles/install/local.dir
+/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug/CMakeFiles/install/strip.dir
+/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug/CMakeFiles/rm_ui_autogen_timestamp_deps.dir
+/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug/CMakeFiles/rm_ui_autogen.dir

@@ -1,0 +1,79 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-fd18c44b39161b34780e.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.5"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "rm_ui",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "rm_ui::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-rm_ui-Debug-572b477c933319264279.json",
+					"name" : "rm_ui",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "rm_ui_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-rm_ui_autogen-Debug-34464e8fd8f44635df0f.json",
+					"name" : "rm_ui_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "rm_ui_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-rm_ui_autogen_timestamp_deps-Debug-a26b95dfe2f7a7e957eb.json",
+					"name" : "rm_ui_autogen_timestamp_deps",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/liaohy/QtDemo/rm_ui/build/Desktop-Debug",
+		"source" : "/home/liaohy/QtDemo/rm_ui"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 6
+	}
+}
