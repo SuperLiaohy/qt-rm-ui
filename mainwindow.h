@@ -50,7 +50,10 @@ private:
     QColor circleColor = Qt::red;
     QColor rectangleColor = Qt::blue;
     int borderWidth = 2;
-
+    // Add this declaration to DragDropImageLabel class in `mainwindow.h`
+public:
+    qreal getSelectedShapeSize() const;
+    void setShapeSize(qreal size);
 public:
     void deleteSelectedShape();
     void setShapeColor(const QColor &color);
@@ -88,13 +91,14 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+
 private slots:
     void on_actionOpen_triggered();
     void createShapeToolbar();
     void deleteSelectedShape();
     void changeShapeColor();
     void changeBorderWidth(int width);
-
+    void changeShapeSize(double size);
 private:
     Ui::MainWindow *ui;
     QLabel *imageLabel;
@@ -104,6 +108,7 @@ private:
 
     // Add this to MainWindow class in mainwindow.h
 private:
+    QDoubleSpinBox *sizeSpinBox;
     QSpinBox *widthSpinBox;
     void updatePropertyControls();
 };

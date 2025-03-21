@@ -281,6 +281,21 @@ void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event)
     isDraggingShape = false;
 }
 
+qreal DragDropImageLabel::getSelectedShapeSize() const
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        return shapes[selectedShapeIndex].sizePercent;
+    }
+    return 0.05; // Default size if no shape selected
+}
+
+void DragDropImageLabel::setShapeSize(qreal size)
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        shapes[selectedShapeIndex].sizePercent = size;
+        update();
+    }
+}
 
 // Methods to manipulate selected shape
 void DragDropImageLabel::deleteSelectedShape()
@@ -525,6 +540,35 @@ void MainWindow::createShapeToolbar()
     // connect(widthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
     //         this, &MainWindow::changeBorderWidth);
     // Add property controls
+
+
+    // QToolBar *propertiesToolbar = addToolBar(tr("形状属性"));
+    //
+    // QAction *deleteAction = propertiesToolbar->addAction(tr("删除"));
+    // connect(deleteAction, &QAction::triggered, this, &MainWindow::deleteSelectedShape);
+    //
+    // QAction *colorAction = propertiesToolbar->addAction(tr("更改颜色"));
+    // connect(colorAction, &QAction::triggered, this, &MainWindow::changeShapeColor);
+    //
+    // propertiesToolbar->addSeparator();
+    //
+    // QLabel *widthLabel = new QLabel(tr("线宽: "));
+    // propertiesToolbar->addWidget(widthLabel);
+    //
+    // widthSpinBox = new QSpinBox();
+    // widthSpinBox->setRange(1, 10);
+    // widthSpinBox->setValue(2);
+    // propertiesToolbar->addWidget(widthSpinBox);
+    //
+    // connect(widthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+    //         this, &MainWindow::changeBorderWidth);
+    //
+    // // Connect selection changes to update property controls
+    // auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    // connect(imageLabel, &DragDropImageLabel::selectionChanged,
+    //         this, &MainWindow::updatePropertyControls);
+
+    // Add property controls
     QToolBar *propertiesToolbar = addToolBar(tr("形状属性"));
 
     QAction *deleteAction = propertiesToolbar->addAction(tr("删除"));
@@ -546,10 +590,24 @@ void MainWindow::createShapeToolbar()
     connect(widthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &MainWindow::changeBorderWidth);
 
+    QLabel *sizeLabel = new QLabel(tr("大小: "));
+    propertiesToolbar->addWidget(sizeLabel);
+
+    sizeSpinBox = new QDoubleSpinBox();
+    sizeSpinBox->setRange(0.01, 1.0);
+    sizeSpinBox->setSingleStep(0.01);
+    sizeSpinBox->setValue(0.05);
+    propertiesToolbar->addWidget(sizeSpinBox);
+
+    connect(sizeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, &MainWindow::changeShapeSize);
+
     // Connect selection changes to update property controls
     auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
     connect(imageLabel, &DragDropImageLabel::selectionChanged,
             this, &MainWindow::updatePropertyControls);
+
+
 }
 
 void MainWindow::updatePropertyControls()
@@ -557,8 +615,10 @@ void MainWindow::updatePropertyControls()
     auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape()) {
         widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
+        sizeSpinBox->setValue(imageLabel->getSelectedShapeSize());
     }
 }
+
 
 void MainWindow::changeShapeColor()
 {
@@ -598,3 +658,14 @@ void MainWindow::changeBorderWidth(int width)
         imageLabel->setBorderWidth(width);
     }
 }
+
+void MainWindow::changeShapeSize(double size)
+{
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel) {
+        imageLabel->setShapeSize(size);
+    }
+}
+
+
+
