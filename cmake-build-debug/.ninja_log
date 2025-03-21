@@ -64,3 +64,13 @@
 303	1594	1742577141523943567	CMakeFiles/rm_ui.dir/mainwindow.cpp.o	a88777c46d394bb2
 1594	1913	1742577142814932353	rm_ui	705be89da6d13501
 1	127	1742577145369910171	/home/liaohy/QtDemo/rm_ui/cmake-build-debug/CMakeFiles/cmake.verify_globs	8e0bba0347b223f3
+1	141	1742577761199890592	/home/liaohy/QtDemo/rm_ui/cmake-build-debug/CMakeFiles/cmake.verify_globs	8e0bba0347b223f3
+142	268	1742577761463888534	rm_ui_autogen/timestamp	71b37444ace52407
+142	268	1742577761463888534	rm_ui_autogen/mocs_compilation.cpp	71b37444ace52407
+142	268	1742577761463888534	/home/liaohy/QtDemo/rm_ui/cmake-build-debug/rm_ui_autogen/timestamp	71b37444ace52407
+142	268	1742577761463888534	/home/liaohy/QtDemo/rm_ui/cmake-build-debug/rm_ui_autogen/mocs_compilation.cpp	71b37444ace52407
+268	1174	1742577761466888511	CMakeFiles/rm_ui.dir/rm_ui_autogen/mocs_compilation.cpp.o	baee87c6f98f3102
+268	1181	1742577761466888511	CMakeFiles/rm_ui.dir/main.cpp.o	bb92c3b0fb2af822
+268	1434	1742577761466888511	CMakeFiles/rm_ui.dir/mainwindow.cpp.o	a88777c46d394bb2
+1434	1659	1742577762632879421	rm_ui	705be89da6d13501
+1	125	1742577765122860013	/home/liaohy/QtDemo/rm_ui/cmake-build-debug/CMakeFiles/cmake.verify_globs	8e0bba0347b223f3

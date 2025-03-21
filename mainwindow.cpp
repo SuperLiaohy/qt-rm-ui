@@ -281,6 +281,16 @@ void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event)
     isDraggingShape = false;
 }
 
+void DragDropImageLabel::setShapePosition(qreal xPercent, qreal yPercent)
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        shapes[selectedShapeIndex].xPercent = qBound(0.0, xPercent, 1.0);
+        shapes[selectedShapeIndex].yPercent = qBound(0.0, yPercent, 1.0);
+        update();
+    }
+}
+
+
 qreal DragDropImageLabel::getSelectedShapeSize() const
 {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
@@ -602,11 +612,34 @@ void MainWindow::createShapeToolbar()
     connect(sizeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, &MainWindow::changeShapeSize);
 
+    propertiesToolbar->addSeparator();
+
+    QLabel *xPosLabel = new QLabel(tr("X坐标: "));
+    propertiesToolbar->addWidget(xPosLabel);
+
+    xPosSpinBox = new QDoubleSpinBox();
+    xPosSpinBox->setRange(0.0, 1.0);
+    xPosSpinBox->setSingleStep(0.01);
+    propertiesToolbar->addWidget(xPosSpinBox);
+
+    connect(xPosSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, &MainWindow::changeShapePosition);
+
+    QLabel *yPosLabel = new QLabel(tr("Y坐标: "));
+    propertiesToolbar->addWidget(yPosLabel);
+
+    yPosSpinBox = new QDoubleSpinBox();
+    yPosSpinBox->setRange(0.0, 1.0);
+    yPosSpinBox->setSingleStep(0.01);
+    propertiesToolbar->addWidget(yPosSpinBox);
+
+    connect(yPosSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, &MainWindow::changeShapePosition);
+
     // Connect selection changes to update property controls
     auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
     connect(imageLabel, &DragDropImageLabel::selectionChanged,
             this, &MainWindow::updatePropertyControls);
-
 
 }
 
@@ -616,6 +649,8 @@ void MainWindow::updatePropertyControls()
     if (imageLabel && imageLabel->hasSelectedShape()) {
         widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
         sizeSpinBox->setValue(imageLabel->getSelectedShapeSize());
+        xPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].xPercent);
+        yPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].yPercent);
     }
 }
 
@@ -667,5 +702,10 @@ void MainWindow::changeShapeSize(double size)
     }
 }
 
-
-
+void MainWindow::changeShapePosition(double)
+{
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel) {
+        imageLabel->setShapePosition(xPosSpinBox->value(), yPosSpinBox->value());
+    }
+}

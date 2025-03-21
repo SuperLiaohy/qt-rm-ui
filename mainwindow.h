@@ -21,6 +21,7 @@ QT_END_NAMESPACE
 class DragDropImageLabel : public QLabel
 {
     Q_OBJECT
+    friend class MainWindow;
 public:
     explicit DragDropImageLabel(QWidget *parent = nullptr);
     void setOriginalPixmap(const QPixmap &pixmap);
@@ -52,9 +53,11 @@ private:
     int borderWidth = 2;
     // Add this declaration to DragDropImageLabel class in `mainwindow.h`
 public:
+
+    void setShapePosition(qreal xPercent, qreal yPercent);
     qreal getSelectedShapeSize() const;
     void setShapeSize(qreal size);
-public:
+
     void deleteSelectedShape();
     void setShapeColor(const QColor &color);
     void setBorderWidth(int width);
@@ -99,7 +102,12 @@ private slots:
     void changeShapeColor();
     void changeBorderWidth(int width);
     void changeShapeSize(double size);
+
+    void changeShapePosition(double);
+
 private:
+    QDoubleSpinBox *xPosSpinBox;
+    QDoubleSpinBox *yPosSpinBox;
     Ui::MainWindow *ui;
     QLabel *imageLabel;
     QDockWidget *shapesDock;
