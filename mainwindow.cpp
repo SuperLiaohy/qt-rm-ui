@@ -254,26 +254,28 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
         int x = (width() - scaledSize.width()) / 2;
         int y = (height() - scaledSize.height()) / 2;
 
-        // Calculate delta movement
-        QPoint delta = event->pos() - dragStartPos;
+        // Calculate image position based on mouse position
+        QPoint imagePos = event->pos() - QPoint(x, y);
 
-        // Calculate scaling factors
-        double scaleX = 1920.0 / scaledSize.width();
-        double scaleY = 1080.0 / scaledSize.height();
+        // Check if mouse is within the image area
+        if (imagePos.x() >= 0 && imagePos.x() < scaledSize.width() &&
+            imagePos.y() >= 0 && imagePos.y() < scaledSize.height()) {
 
-        // Apply delta to current position
-        shapes[selectedShapeIndex].x += delta.x() * scaleX;
-        shapes[selectedShapeIndex].y += delta.y() * scaleY;
+            // Convert screen coordinates to 1920x1080 coordinates
+            double scaleX = 1920.0 / scaledSize.width();
+            double scaleY = 1080.0 / scaledSize.height();
 
-        // Ensure coordinates stay within bounds
-        shapes[selectedShapeIndex].x = qBound(0, shapes[selectedShapeIndex].x, 1920);
-        shapes[selectedShapeIndex].y = qBound(0, shapes[selectedShapeIndex].y, 1080);
+            // Calculate absolute coordinates (0-1920, 0-1080)
+            int absX = imagePos.x() * scaleX;
+            int absY = imagePos.y() * scaleY;
 
-        // Update drag start position for next move
-        dragStartPos = event->pos();
+            // Set shape position directly to mouse position
+            shapes[selectedShapeIndex].x = qBound(0, absX, 1920);
+            shapes[selectedShapeIndex].y = qBound(0, absY, 1080);
 
-        update();
-        emit selectionChanged();
+            update();
+            emit selectionChanged();
+            }
     }
 }
 
