@@ -303,6 +303,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qtransform.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qvalidator.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qwindowdefs.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QCheckBox
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QColorDialog
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QDockWidget
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QGraphicsItem
@@ -313,6 +314,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QMainWindow
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QSpinBox
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QToolBar
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractbutton.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractitemdelegate.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractitemview.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractscrollarea.h
@@ -320,6 +322,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractspinbox.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qaction.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qactiongroup.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qcheckbox.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qcolordialog.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qdialog.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qdockwidget.h

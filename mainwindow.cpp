@@ -13,11 +13,18 @@
 #include <QColorDialog>
 #include <QToolBar>
 #include <QSpinBox>
+#include <QVBoxLayout>
 // DragDropImageLabel 实现
 DragDropImageLabel::DragDropImageLabel(QWidget *parent) : QLabel(parent)
 {
     setAcceptDrops(true); // 允许接收拖放
+
+    // Initially all layers are visible
+    for (int i = 0; i <= 9; i++) {
+        visibleLayers.insert(i);
+    }
 }
+
 
 
 void DragDropImageLabel::setOriginalPixmap(const QPixmap &pixmap)
@@ -120,6 +127,7 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
     shape.x = absX;
     shape.y = absY;
     shape.sizePercent = 0.05;
+    shape.layer = 5; // Default to middle layer
 
     if (shape.type == "圆形") {
         shape.color = Qt::red;
@@ -156,8 +164,22 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
 
     painter.setRenderHint(QPainter::Antialiasing);
 
+    // Create a list of indices sorted by layer
+    QList<int> sortedIndices;
     for (int i = 0; i < shapes.size(); i++) {
-        const auto &shape = shapes[i];
+        // Only include shapes on visible layers
+        if (visibleLayers.contains(shapes[i].layer)) {
+            sortedIndices.append(i);
+        }
+    }
+
+    // Sort indices by layer (lower layers first)
+    std::sort(sortedIndices.begin(), sortedIndices.end(),
+        [this](int a, int b) { return shapes[a].layer < shapes[b].layer; });
+
+    // Draw shapes according to layer order
+    for (int idx : sortedIndices) {
+        const auto &shape = shapes[idx];
 
         // Convert from absolute coordinates to screen coordinates
         double relX = (double)shape.x / 1920 * originalPixmap.width();
@@ -171,7 +193,7 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
 
         QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
 
-        if (i == selectedShapeIndex) {
+        if (idx == selectedShapeIndex) {
             painter.setPen(QPen(Qt::black, 1, Qt::DashLine));
             painter.drawRect(shapeRect.adjusted(-3, -3, 3, 3));
             painter.setPen(QPen(shape.color.darker(120), shape.borderWidth));
@@ -212,6 +234,10 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
     for (int i = shapes.size() - 1; i >= 0; i--) {
         const auto &shape = shapes[i];
 
+        // Skip shapes on hidden layers
+        if (!visibleLayers.contains(shape.layer)) {
+            continue;
+        }
         // Convert from absolute coordinates to screen coordinates
         double relX = (double)shape.x / 1920 * originalPixmap.width();
         double relY = (double)shape.y / 1080 * originalPixmap.height();
@@ -378,6 +404,27 @@ int DragDropImageLabel::getSelectedShapeBorderWidth() const
     return 2; // Default width if no shape selected
 }
 
+void DragDropImageLabel::setShapeLayer(int layer)
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        shapes[selectedShapeIndex].layer = qBound(0, layer, 9);
+        update();
+    }
+}
+
+int DragDropImageLabel::getSelectedShapeLayer() const
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        return shapes[selectedShapeIndex].layer;
+    }
+    return 5; // Default layer if no shape selected
+}
+
+void DragDropImageLabel::setVisibleLayers(const QSet<int>& layers)
+{
+    visibleLayers = layers;
+    update();  // Redraw with the new visibility settings
+}
 
 
 
@@ -451,6 +498,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     //创建形状工具栏
     createShapeToolbar();
+    createLayerPanel();
 
     //如果ui没有打开图片的动作，则创建一个
     if(!findChild<QAction*>("actionOpen")) {
@@ -515,8 +563,66 @@ QPixmap MainWindow::createShapeIcon(const QString &shape)
 
     return pixmap;
 }
+void MainWindow::onLayerVisibilityChanged(int)
+{
+    // Update the set of visible layers
+    visibleLayers.clear();
 
+    for (QCheckBox* checkbox : layerCheckBoxes) {
+        if (checkbox->isChecked()) {
+            int layer = checkbox->property("layer").toInt();
+            visibleLayers.insert(layer);
+        }
+    }
 
+    // Tell the image label to update with the new visible layers
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel) {
+        imageLabel->setVisibleLayers(visibleLayers);
+    }
+}
+void MainWindow::createLayerPanel()
+{
+    // Create layers dock window
+    layersDock = new QDockWidget(tr("图层"), this);
+    layersDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    layersDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+
+    // Create a widget to hold the checkboxes
+    QWidget* layersWidget = new QWidget(layersDock);
+    QVBoxLayout* layersLayout = new QVBoxLayout(layersWidget);
+
+    // Add header and select all checkbox
+    QCheckBox* selectAllCheckBox = new QCheckBox(tr("全选"), layersWidget);
+    selectAllCheckBox->setChecked(true);
+    layersLayout->addWidget(selectAllCheckBox);
+
+    layersLayout->addWidget(new QFrame(layersWidget));
+
+    // Create checkboxes for each layer
+    for (int i = 9; i >= 0; i--) {
+        QCheckBox* layerCheckBox = new QCheckBox(tr("图层 %1").arg(i), layersWidget);
+        layerCheckBox->setChecked(true);
+        layerCheckBox->setProperty("layer", i);
+        layerCheckBoxes.append(layerCheckBox);
+        layersLayout->addWidget(layerCheckBox);
+
+        connect(layerCheckBox, &QCheckBox::stateChanged, this, &MainWindow::onLayerVisibilityChanged);
+    }
+
+    // Connect select all checkbox
+    connect(selectAllCheckBox, &QCheckBox::stateChanged, this, [this](int state) {
+        for (QCheckBox* checkbox : layerCheckBoxes) {
+            checkbox->setChecked(state == Qt::Checked);
+        }
+    });
+
+    layersLayout->addStretch();
+    layersWidget->setLayout(layersLayout);
+
+    layersDock->setWidget(layersWidget);
+    addDockWidget(Qt::LeftDockWidgetArea, layersDock);
+}
 
 // Implementation in mainwindow.cpp
 void MainWindow::createShapeToolbar()
@@ -669,6 +775,20 @@ void MainWindow::createShapeToolbar()
     connect(imageLabel, &DragDropImageLabel::selectionChanged,
             this, &MainWindow::updatePropertyControls);
 
+    propertiesToolbar->addSeparator();
+
+    QLabel *layerLabel = new QLabel(tr("图层: "));
+    propertiesToolbar->addWidget(layerLabel);
+
+    layerSpinBox = new QSpinBox();
+    layerSpinBox->setRange(0, 9);
+    layerSpinBox->setValue(5);  // Default to middle layer
+    layerSpinBox->setToolTip(tr("0为最底层，9为最顶层"));
+    propertiesToolbar->addWidget(layerSpinBox);
+
+    connect(layerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeShapeLayer);
+
 }
 
 void MainWindow::updatePropertyControls()
@@ -678,16 +798,19 @@ void MainWindow::updatePropertyControls()
         // Block signals to prevent feedback loop
         xPosSpinBox->blockSignals(true);
         yPosSpinBox->blockSignals(true);
+        layerSpinBox->blockSignals(true);
 
         // Update controls with current values
         widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
         sizeSpinBox->setValue(imageLabel->getSelectedShapeSize());
         xPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].x);
         yPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].y);
+        layerSpinBox->setValue(imageLabel->getSelectedShapeLayer());
 
         // Re-enable signals
         xPosSpinBox->blockSignals(false);
         yPosSpinBox->blockSignals(false);
+        layerSpinBox->blockSignals(false);
     }
 }
 
@@ -743,5 +866,12 @@ void MainWindow::changeShapePosition(int)
     auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
     if (imageLabel) {
         imageLabel->setShapePosition(xPosSpinBox->value(), yPosSpinBox->value());
+    }
+}
+void MainWindow::changeShapeLayer(int layer)
+{
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel && imageLabel->hasSelectedShape()) {
+        imageLabel->setShapeLayer(layer);
     }
 }

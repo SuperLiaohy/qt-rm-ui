@@ -11,6 +11,7 @@
 #include <QColorDialog>
 #include <QToolBar>
 #include <QSpinBox>
+#include <QCheckBox>
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -22,7 +23,15 @@ class DragDropImageLabel : public QLabel
 {
     Q_OBJECT
     friend class MainWindow;
+
 public:
+    void setVisibleLayers(const QSet<int>& layers);
+
+private:
+    QSet<int> visibleLayers;  // Set of currently visible layers
+public:
+    void setShapeLayer(int layer);
+    int getSelectedShapeLayer() const;
     explicit DragDropImageLabel(QWidget *parent = nullptr);
     void setOriginalPixmap(const QPixmap &pixmap);
     QPixmap getPixmap() const { return originalPixmap; }
@@ -72,6 +81,7 @@ private:
         qreal sizePercent;  // Size as a percentage of the image's minimum dimension
         QColor color;       // Shape color
         int borderWidth;    // Shape border width
+        int layer;          // Layer from 0-9 (0 is bottom, 9 is top)
     };
     QList<Shape> shapes; // 存储形状及其相对位置
     QPixmap originalPixmap;
@@ -95,6 +105,20 @@ public:
     ~MainWindow();
 
 
+private:
+    QDockWidget *layersDock;
+    QList<QCheckBox*> layerCheckBoxes;
+    QSet<int> visibleLayers;  // Set of visible layer indices
+
+    private slots:
+        void onLayerVisibilityChanged(int);
+    // Add to MainWindow class in mainwindow.h
+private:
+
+    QSpinBox *layerSpinBox;
+
+    private slots:
+        void changeShapeLayer(int layer);
 private slots:
     void on_actionOpen_triggered();
     void createShapeToolbar();
@@ -113,6 +137,8 @@ private:
     QDockWidget *shapesDock;
     QListWidget *shapesListWidget;
     QPixmap createShapeIcon(const QString &shape);
+
+    void createLayerPanel();
 
     // Add this to MainWindow class in mainwindow.h
 private:
