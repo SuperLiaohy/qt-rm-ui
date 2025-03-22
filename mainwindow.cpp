@@ -92,44 +92,41 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
     if (originalPixmap.isNull())
         return;
 
-    // 获取拖放的形状类型
     QString shapeType = event->mimeData()->text();
 
-    // 计算适合窗口的缩放尺寸
     QSize scaledSize = originalPixmap.size();
     scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
 
-    // 计算图片在窗口中的位置
     int x = (width() - scaledSize.width()) / 2;
     int y = (height() - scaledSize.height()) / 2;
 
-    // 检查鼠标是否在图片区域内
     QRect imgRect(x, y, scaledSize.width(), scaledSize.height());
     if (!imgRect.contains(event->pos())) {
-        return; // 如果不在图片上，忽略此次拖放
+        return;
     }
 
-    // 计算在原始图片坐标系中的相对位置
     double scaleX = (double)originalPixmap.width() / scaledSize.width();
     double scaleY = (double)originalPixmap.height() / scaledSize.height();
 
     double relX = (event->pos().x() - x) * scaleX;
     double relY = (event->pos().y() - y) * scaleY;
 
-    // 添加形状
+    // Convert to absolute coordinates in 1920x1080 range
+    int absX = (relX / originalPixmap.width()) * 1920;
+    int absY = (relY / originalPixmap.height()) * 1080;
+
     Shape shape;
     shape.type = shapeType;
-    shape.xPercent = relX / originalPixmap.width();
-    shape.yPercent = relY / originalPixmap.height();
-    shape.sizePercent = 0.05; // 使用固定大小比例
+    shape.x = absX;
+    shape.y = absY;
+    shape.sizePercent = 0.05;
 
-    // 设置默认颜色和线宽
     if (shape.type == "圆形") {
         shape.color = Qt::red;
     } else if (shape.type == "矩形") {
         shape.color = Qt::blue;
     }
-    shape.borderWidth = 2; // 默认线宽
+    shape.borderWidth = 2;
 
     shapes.append(shape);
 
@@ -140,47 +137,43 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
 void DragDropImageLabel::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
-    painter.fillRect(rect(), QColor(240, 240, 240)); // Background
+    painter.fillRect(rect(), QColor(240, 240, 240));
 
     if (originalPixmap.isNull()) {
         QLabel::paintEvent(event);
         return;
     }
 
-    // Calculate scaled image position and size
     QSize scaledSize = originalPixmap.size();
     scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
     int x = (width() - scaledSize.width()) / 2;
     int y = (height() - scaledSize.height()) / 2;
 
-    // Draw scaled image
     painter.drawPixmap(x, y, scaledSize.width(), scaledSize.height(), originalPixmap);
 
-    // Calculate scale factors
     double scaleX = (double)scaledSize.width() / originalPixmap.width();
     double scaleY = (double)scaledSize.height() / originalPixmap.height();
 
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Draw all shapes
     for (int i = 0; i < shapes.size(); i++) {
         const auto &shape = shapes[i];
 
-        int imgX = x + shape.xPercent * originalPixmap.width() * scaleX;
-        int imgY = y + shape.yPercent * originalPixmap.height() * scaleY;
+        // Convert from absolute coordinates to screen coordinates
+        double relX = (double)shape.x / 1920 * originalPixmap.width();
+        double relY = (double)shape.y / 1080 * originalPixmap.height();
+
+        int imgX = x + relX * scaleX;
+        int imgY = y + relY * scaleY;
 
         int minDimension = qMin(originalPixmap.width(), originalPixmap.height());
         int shapeSize = shape.sizePercent * minDimension * scaleX;
 
         QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
 
-        // Highlight selected shape
         if (i == selectedShapeIndex) {
-            // Draw selection indicator
             painter.setPen(QPen(Qt::black, 1, Qt::DashLine));
             painter.drawRect(shapeRect.adjusted(-3, -3, 3, 3));
-
-            // Draw the shape with a slightly different color
             painter.setPen(QPen(shape.color.darker(120), shape.borderWidth));
         } else {
             painter.setPen(QPen(shape.color, shape.borderWidth));
@@ -202,7 +195,6 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
 
     int oldSelection = selectedShapeIndex;
 
-    // Calculate scaled image position and size
     QSize scaledSize = originalPixmap.size();
     scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
     int x = (width() - scaledSize.width()) / 2;
@@ -211,12 +203,15 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
     double scaleX = (double)scaledSize.width() / originalPixmap.width();
     double scaleY = (double)scaledSize.height() / originalPixmap.height();
 
-    // Check if click is on any shape
-    for (int i = shapes.size() - 1; i >= 0; i--) { // Check from top to bottom (last drawn first)
+    for (int i = shapes.size() - 1; i >= 0; i--) {
         const auto &shape = shapes[i];
 
-        int imgX = x + shape.xPercent * originalPixmap.width() * scaleX;
-        int imgY = y + shape.yPercent * originalPixmap.height() * scaleY;
+        // Convert from absolute coordinates to screen coordinates
+        double relX = (double)shape.x / 1920 * originalPixmap.width();
+        double relY = (double)shape.y / 1080 * originalPixmap.height();
+
+        int imgX = x + relX * scaleX;
+        int imgY = y + relY * scaleY;
 
         int minDimension = qMin(originalPixmap.width(), originalPixmap.height());
         int shapeSize = shape.sizePercent * minDimension * scaleX;
@@ -236,7 +231,6 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
         }
     }
 
-    // If click is not on any shape, deselect
     selectedShapeIndex = -1;
     isDraggingShape = false;
     update();
@@ -248,31 +242,31 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
 void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
 {
     if (isDraggingShape && selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
-        // Calculate scaled image position and size
         QSize scaledSize = originalPixmap.size();
         scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
         int x = (width() - scaledSize.width()) / 2;
         int y = (height() - scaledSize.height()) / 2;
 
-        // Calculate how much the mouse has moved
         QPoint delta = event->pos() - dragStartPos;
 
-        // Convert the delta to image coordinates
-        double scaleX = (double)originalPixmap.width() / scaledSize.width();
-        double scaleY = (double)originalPixmap.height() / scaledSize.height();
+        // Calculate a uniform scale factor for both X and Y
+        double scaleFactorX = 1920.0 / scaledSize.width();
+        double scaleFactorY = 1080.0 / scaledSize.height();
 
-        // Update the shape's position (as percentage of image size)
-        shapes[selectedShapeIndex].xPercent += delta.x() * scaleX / originalPixmap.width();
-        shapes[selectedShapeIndex].yPercent += delta.y() * scaleY / originalPixmap.height();
+        // Apply the same scaling to both deltaX and deltaY
+        int deltaX = delta.x() * scaleFactorX;
+        int deltaY = delta.y() * scaleFactorY;
 
-        // Limit the position to stay within the image bounds
-        shapes[selectedShapeIndex].xPercent = qBound(0.0, shapes[selectedShapeIndex].xPercent, 1.0);
-        shapes[selectedShapeIndex].yPercent = qBound(0.0, shapes[selectedShapeIndex].yPercent, 1.0);
+        shapes[selectedShapeIndex].x += deltaX;
+        shapes[selectedShapeIndex].y += deltaY;
 
-        // Update the drag start position
+        shapes[selectedShapeIndex].x = qBound(0, shapes[selectedShapeIndex].x, 1920);
+        shapes[selectedShapeIndex].y = qBound(0, shapes[selectedShapeIndex].y, 1080);
+
         dragStartPos = event->pos();
 
         update();
+        emit selectionChanged();
     }
 }
 
@@ -281,11 +275,11 @@ void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event)
     isDraggingShape = false;
 }
 
-void DragDropImageLabel::setShapePosition(qreal xPercent, qreal yPercent)
+void DragDropImageLabel::setShapePosition(int x, int y)
 {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
-        shapes[selectedShapeIndex].xPercent = qBound(0.0, xPercent, 1.0);
-        shapes[selectedShapeIndex].yPercent = qBound(0.0, yPercent, 1.0);
+        shapes[selectedShapeIndex].x = qBound(0, x, 1920);
+        shapes[selectedShapeIndex].y = qBound(0, y, 1080);
         update();
     }
 }
@@ -617,23 +611,23 @@ void MainWindow::createShapeToolbar()
     QLabel *xPosLabel = new QLabel(tr("X坐标: "));
     propertiesToolbar->addWidget(xPosLabel);
 
-    xPosSpinBox = new QDoubleSpinBox();
-    xPosSpinBox->setRange(0.0, 1.0);
-    xPosSpinBox->setSingleStep(0.01);
+    xPosSpinBox = new QSpinBox();  // Changed to QSpinBox
+    xPosSpinBox->setRange(0, 1920);
+    xPosSpinBox->setSingleStep(1);
     propertiesToolbar->addWidget(xPosSpinBox);
 
-    connect(xPosSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+    connect(xPosSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &MainWindow::changeShapePosition);
 
     QLabel *yPosLabel = new QLabel(tr("Y坐标: "));
     propertiesToolbar->addWidget(yPosLabel);
 
-    yPosSpinBox = new QDoubleSpinBox();
-    yPosSpinBox->setRange(0.0, 1.0);
-    yPosSpinBox->setSingleStep(0.01);
+    yPosSpinBox = new QSpinBox();  // Changed to QSpinBox
+    yPosSpinBox->setRange(0, 1080);
+    yPosSpinBox->setSingleStep(1);
     propertiesToolbar->addWidget(yPosSpinBox);
 
-    connect(yPosSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+    connect(yPosSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &MainWindow::changeShapePosition);
 
     // Connect selection changes to update property controls
@@ -649,8 +643,8 @@ void MainWindow::updatePropertyControls()
     if (imageLabel && imageLabel->hasSelectedShape()) {
         widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
         sizeSpinBox->setValue(imageLabel->getSelectedShapeSize());
-        xPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].xPercent);
-        yPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].yPercent);
+        xPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].x);
+        yPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].y);
     }
 }
 
@@ -701,8 +695,7 @@ void MainWindow::changeShapeSize(double size)
         imageLabel->setShapeSize(size);
     }
 }
-
-void MainWindow::changeShapePosition(double)
+void MainWindow::changeShapePosition(int)
 {
     auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
     if (imageLabel) {

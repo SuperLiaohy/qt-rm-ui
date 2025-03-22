@@ -54,7 +54,7 @@ private:
     // Add this declaration to DragDropImageLabel class in `mainwindow.h`
 public:
 
-    void setShapePosition(qreal xPercent, qreal yPercent);
+    void setShapePosition(int x, int y);
     qreal getSelectedShapeSize() const;
     void setShapeSize(qreal size);
 
@@ -67,11 +67,11 @@ public:
 private:
     struct Shape {
         QString type;
-        qreal xPercent;      // 相对于图片宽度的百分比位置 (0.0-1.0)
-        qreal yPercent;      // 相对于图片高度的百分比位置 (0.0-1.0)
-        qreal sizePercent;   // 相对于图片最小边的百分比大小 (0.0-1.0)
-        QColor color;        // 形状的颜色
-        int borderWidth;     // 形状的线宽
+        int x;              // X coordinate (0-1920)
+        int y;              // Y coordinate (0-1080)
+        qreal sizePercent;  // Size as a percentage of the image's minimum dimension
+        QColor color;       // Shape color
+        int borderWidth;    // Shape border width
     };
     QList<Shape> shapes; // 存储形状及其相对位置
     QPixmap originalPixmap;
@@ -103,11 +103,11 @@ private slots:
     void changeBorderWidth(int width);
     void changeShapeSize(double size);
 
-    void changeShapePosition(double);
-
+    void changeShapePosition(int);
 private:
-    QDoubleSpinBox *xPosSpinBox;
-    QDoubleSpinBox *yPosSpinBox;
+
+    QSpinBox *xPosSpinBox;  // Changed to QSpinBox
+    QSpinBox *yPosSpinBox;  // Changed to QSpinBox
     Ui::MainWindow *ui;
     QLabel *imageLabel;
     QDockWidget *shapesDock;
