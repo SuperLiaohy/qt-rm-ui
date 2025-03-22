@@ -200,6 +200,12 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
     int x = (width() - scaledSize.width()) / 2;
     int y = (height() - scaledSize.height()) / 2;
 
+    // Check if click is outside image area
+    QRect imageRect(x, y, scaledSize.width(), scaledSize.height());
+    if (!imageRect.contains(event->pos())) {
+        return;
+    }
+
     double scaleX = (double)scaledSize.width() / originalPixmap.width();
     double scaleY = (double)scaledSize.height() / originalPixmap.height();
 
@@ -231,6 +237,7 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
         }
     }
 
+    // If click is not on any shape, deselect
     selectedShapeIndex = -1;
     isDraggingShape = false;
     update();
@@ -247,26 +254,24 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
         int x = (width() - scaledSize.width()) / 2;
         int y = (height() - scaledSize.height()) / 2;
 
-        QPoint delta = event->pos() - dragStartPos;
+        // Calculate position within image coordinates
+        QPoint imagePos = event->pos() - QPoint(x, y);
 
-        // Calculate a uniform scale factor for both X and Y
-        double scaleFactorX = 1920.0 / scaledSize.width();
-        double scaleFactorY = 1080.0 / scaledSize.height();
+        // Convert screen position to absolute 1920x1080 coordinates
+        double scaleX = 1920.0 / scaledSize.width();
+        double scaleY = 1080.0 / scaledSize.height();
 
-        // Apply the same scaling to both deltaX and deltaY
-        int deltaX = delta.x() * scaleFactorX;
-        int deltaY = delta.y() * scaleFactorY;
+        // Only update if mouse is within the image area
+        if (imagePos.x() >= 0 && imagePos.x() < scaledSize.width() &&
+            imagePos.y() >= 0 && imagePos.y() < scaledSize.height()) {
 
-        shapes[selectedShapeIndex].x += deltaX;
-        shapes[selectedShapeIndex].y += deltaY;
+            // Set direct absolute position instead of using delta
+            shapes[selectedShapeIndex].x = qBound(0, (int)(imagePos.x() * scaleX), 1920);
+            shapes[selectedShapeIndex].y = qBound(0, (int)(imagePos.y() * scaleY), 1080);
 
-        shapes[selectedShapeIndex].x = qBound(0, shapes[selectedShapeIndex].x, 1920);
-        shapes[selectedShapeIndex].y = qBound(0, shapes[selectedShapeIndex].y, 1080);
-
-        dragStartPos = event->pos();
-
-        update();
-        emit selectionChanged();
+            update();
+            emit selectionChanged();
+            }
     }
 }
 
