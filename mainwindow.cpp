@@ -245,7 +245,11 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
         if (inBorder) {
             selectedShapeIndex = i;
             isDraggingShape = true;
-            dragStartPos = event->pos();
+
+            // Store the offset between mouse position and shape center
+            QPoint shapeCenterPos(imgX, imgY);
+            dragStartPos = event->pos() - shapeCenterPos;
+
             update();
 
             if (oldSelection != selectedShapeIndex) {
@@ -264,6 +268,7 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
         emit selectionChanged();
     }
 }
+
 void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
 {
     if (isDraggingShape && selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
@@ -272,12 +277,15 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
         int x = (width() - scaledSize.width()) / 2;
         int y = (height() - scaledSize.height()) / 2;
 
-        // Calculate image position based on mouse position
-        QPoint imagePos = event->pos() - QPoint(x, y);
+        // Get the shape center position based on mouse and stored offset
+        QPoint shapeCenterPos = event->pos() - dragStartPos;
 
-        // Check if mouse is within the image area
-        if (imagePos.x() >= 0 && imagePos.x() < scaledSize.width() &&
-            imagePos.y() >= 0 && imagePos.y() < scaledSize.height()) {
+        // Convert to image coordinates
+        QPoint imagePos = shapeCenterPos - QPoint(x, y);
+
+        // Check if center position is within the image area or close enough
+        if (imagePos.x() >= -100 && imagePos.x() < scaledSize.width() + 100 &&
+            imagePos.y() >= -100 && imagePos.y() < scaledSize.height() + 100) {
 
             // Convert screen coordinates to 1920x1080 coordinates
             double scaleX = 1920.0 / scaledSize.width();
@@ -287,16 +295,15 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
             int absX = imagePos.x() * scaleX;
             int absY = imagePos.y() * scaleY;
 
-            // Set shape position directly to mouse position
+            // Set shape position
             shapes[selectedShapeIndex].x = qBound(0, absX, 1920);
             shapes[selectedShapeIndex].y = qBound(0, absY, 1080);
 
             update();
             emit selectionChanged();
-            }
+        }
     }
 }
-
 void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event)
 {
     isDraggingShape = false;
