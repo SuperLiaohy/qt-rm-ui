@@ -222,9 +222,27 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
         int minDimension = qMin(originalPixmap.width(), originalPixmap.height());
         int shapeSize = shape.sizePercent * minDimension * scaleX;
 
-        QRect shapeRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
+        // Create the outer and inner rectangles for border detection
+        QRect outerRect(imgX - shapeSize/2, imgY - shapeSize/2, shapeSize, shapeSize);
 
-        if (shapeRect.contains(event->pos())) {
+        // Inner rectangle is the outer rectangle shrunk by the border width
+        int borderWidth = qMax(5, shape.borderWidth); // Use at least 5px for easier selection
+        QRect innerRect = outerRect.adjusted(borderWidth, borderWidth, -borderWidth, -borderWidth);
+
+        // Check if point is within the border area (in outer rect but not in inner rect)
+        bool inBorder = outerRect.contains(event->pos()) && !innerRect.contains(event->pos());
+
+        if (shape.type == "圆形") {
+            // For circle, calculate distance from center
+            QPointF center(imgX, imgY);
+            qreal distance = QLineF(center, event->pos()).length();
+            qreal outerRadius = shapeSize / 2.0;
+            qreal innerRadius = outerRadius - borderWidth;
+
+            inBorder = (distance <= outerRadius) && (distance >= innerRadius);
+        }
+
+        if (inBorder) {
             selectedShapeIndex = i;
             isDraggingShape = true;
             dragStartPos = event->pos();
@@ -237,7 +255,7 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
         }
     }
 
-    // If click is not on any shape, deselect
+    // If click is not on any shape border, deselect
     selectedShapeIndex = -1;
     isDraggingShape = false;
     update();
