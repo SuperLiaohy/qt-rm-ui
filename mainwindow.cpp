@@ -254,24 +254,26 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
         int x = (width() - scaledSize.width()) / 2;
         int y = (height() - scaledSize.height()) / 2;
 
-        // Calculate position within image coordinates
-        QPoint imagePos = event->pos() - QPoint(x, y);
+        // Calculate delta movement
+        QPoint delta = event->pos() - dragStartPos;
 
-        // Convert screen position to absolute 1920x1080 coordinates
+        // Calculate scaling factors
         double scaleX = 1920.0 / scaledSize.width();
         double scaleY = 1080.0 / scaledSize.height();
 
-        // Only update if mouse is within the image area
-        if (imagePos.x() >= 0 && imagePos.x() < scaledSize.width() &&
-            imagePos.y() >= 0 && imagePos.y() < scaledSize.height()) {
+        // Apply delta to current position
+        shapes[selectedShapeIndex].x += delta.x() * scaleX;
+        shapes[selectedShapeIndex].y += delta.y() * scaleY;
 
-            // Set direct absolute position instead of using delta
-            shapes[selectedShapeIndex].x = qBound(0, (int)(imagePos.x() * scaleX), 1920);
-            shapes[selectedShapeIndex].y = qBound(0, (int)(imagePos.y() * scaleY), 1080);
+        // Ensure coordinates stay within bounds
+        shapes[selectedShapeIndex].x = qBound(0, shapes[selectedShapeIndex].x, 1920);
+        shapes[selectedShapeIndex].y = qBound(0, shapes[selectedShapeIndex].y, 1080);
 
-            update();
-            emit selectionChanged();
-            }
+        // Update drag start position for next move
+        dragStartPos = event->pos();
+
+        update();
+        emit selectionChanged();
     }
 }
 
@@ -646,10 +648,19 @@ void MainWindow::updatePropertyControls()
 {
     auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape()) {
+        // Block signals to prevent feedback loop
+        xPosSpinBox->blockSignals(true);
+        yPosSpinBox->blockSignals(true);
+
+        // Update controls with current values
         widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
         sizeSpinBox->setValue(imageLabel->getSelectedShapeSize());
         xPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].x);
         yPosSpinBox->setValue(imageLabel->shapes[imageLabel->selectedShapeIndex].y);
+
+        // Re-enable signals
+        xPosSpinBox->blockSignals(false);
+        yPosSpinBox->blockSignals(false);
     }
 }
 
