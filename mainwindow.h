@@ -15,6 +15,7 @@
 #include <QDrag>
 #include <QMimeData>
 #include <QStackedWidget>
+#include <QLineEdit>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -86,6 +87,11 @@ public:
     int getSelectedShapeFloatFontSize() const;
     void setFloatValue(int32_t value);
     void setFloatFontSize(int fontSize);
+    QString getSelectedShapeText() const;
+    int getSelectedShapeTextLength() const;
+    int getSelectedShapeTextFontSize() const;
+    void setText(const QString &text);
+    void setTextFontSize(int fontSize);
 
     // Get shape type
     QString getSelectedShapeType() const;
@@ -153,6 +159,12 @@ private:
                 int32_t value;    // The int32_t value to display (will be divided by 1000 for display)
                 int fontSize;     // Font size for displaying the value
             } floatValue;
+
+            struct {
+                char data[30];  // Character array to store text (max 30 chars)
+                int length;     // Actual length of text
+                int fontSize;   // Font size for displaying the text
+            } text;
         } specific;
     };
 
@@ -206,6 +218,7 @@ private slots:
     void changeArcProperties(int);
     void changeIntProperties(int);
     void changeFloatProperties(int);
+    void changeTextProperties();
 
 private:
     Ui::MainWindow *ui;
@@ -263,6 +276,11 @@ private:
     QWidget *floatValuePropertiesWidget;
     QSpinBox *floatValueSpinBox;
     QSpinBox *floatFontSizeSpinBox;
+
+    // Text-specific controls
+    QWidget *textPropertiesWidget;
+    QLineEdit *textLineEdit;
+    QSpinBox *textFontSizeSpinBox;
 
     // Helper methods
     void createShapeToolbar();

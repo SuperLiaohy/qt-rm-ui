@@ -299,6 +299,8 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qregion.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qrgb.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qrgba64.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qtextcursor.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qtextformat.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qtextoption.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qtgui-config.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qtguiglobal.h
@@ -312,6 +314,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QGraphicsScene
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QGraphicsView
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QLabel
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QLineEdit
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QListWidget
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QMainWindow
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QSpinBox
@@ -334,6 +337,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qgraphicsscene.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qgraphicsview.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlabel.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlineedit.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlistview.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlistwidget.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qmainwindow.h

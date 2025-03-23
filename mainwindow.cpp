@@ -170,6 +170,16 @@ void DragDropImageLabel::dropEvent(QDropEvent *event) {
         shape.color = Qt::black;
         shape.specific.floatValue.value = 0; // Default value
         shape.specific.floatValue.fontSize = 16; // Default font size
+    } else if (shape.type == "文本字符") {
+        shape.color = Qt::black;
+
+        // Initialize with default text
+        const char *defaultText = "Text";
+        int length = strlen(defaultText);
+        memcpy(shape.specific.text.data, defaultText, length);
+        shape.specific.text.data[length] = '\0'; // Null-terminate
+        shape.specific.text.length = length;
+        shape.specific.text.fontSize = 16; // Default font size
     }
 
     shapes.append(shape);
@@ -395,6 +405,20 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event) {
             // Draw the float value as text (divided by 1000)
             double displayValue = shape.specific.floatValue.value / 1000.0;
             QString text = QString::number(displayValue, 'f', 3);
+            painter.drawText(imgX, imgY, text);
+        } else if (shape.type == "文本字符") {
+            // Calculate scaled position
+            double relX = (double) shape.x / 1920 * originalPixmap.width();
+            double relY = (double) shape.y / 1080 * originalPixmap.height();
+            int imgX = x + relX * scaleX;
+            int imgY = y + relY * scaleY;
+
+            // Set font size and family
+            QFont font("Arial", shape.specific.text.fontSize);
+            painter.setFont(font);
+
+            // Draw the text
+            QString text = QString::fromUtf8(shape.specific.text.data, shape.specific.text.length);
             painter.drawText(imgX, imgY, text);
         }
     }
@@ -752,6 +776,26 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event) {
                 QFontMetrics metrics(font);
                 double displayValue = shape.specific.floatValue.value / 1000.0;
                 QString text = QString::number(displayValue, 'f', 3);
+                QRect textRect = metrics.boundingRect(text);
+                textRect.moveTo(imgX, imgY - metrics.ascent());
+
+                // Add some padding for easier selection
+                textRect.adjust(-5, -5, 5, 5);
+
+                if (textRect.contains(event->pos())) {
+                    isHit = true;
+                }
+            } else if (shape.type == "文本字符") {
+                // Calculate position for testing
+                double relX = (double) shape.x / 1920 * originalPixmap.width();
+                double relY = (double) shape.y / 1080 * originalPixmap.height();
+                int imgX = x + relX * scaleX;
+                int imgY = y + relY * scaleY;
+
+                // Create a hit area around the text
+                QFont font("Arial", shape.specific.text.fontSize);
+                QFontMetrics metrics(font);
+                QString text = QString::fromUtf8(shape.specific.text.data, shape.specific.text.length);
                 QRect textRect = metrics.boundingRect(text);
                 textRect.moveTo(imgX, imgY - metrics.ascent());
 
@@ -1187,6 +1231,55 @@ void DragDropImageLabel::setFloatFontSize(int fontSize) {
     }
 }
 
+QString DragDropImageLabel::getSelectedShapeText() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "文本字符") {
+        return QString::fromUtf8(shapes[selectedShapeIndex].specific.text.data,
+                                 shapes[selectedShapeIndex].specific.text.length);
+    }
+    return QString(); // Empty string if no text shape is selected
+}
+
+int DragDropImageLabel::getSelectedShapeTextLength() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "文本字符") {
+        return shapes[selectedShapeIndex].specific.text.length;
+    }
+    return 0; // Default length if no text shape is selected
+}
+
+int DragDropImageLabel::getSelectedShapeTextFontSize() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "文本字符") {
+        return shapes[selectedShapeIndex].specific.text.fontSize;
+    }
+    return 12; // Default font size if no text shape is selected
+}
+
+void DragDropImageLabel::setText(const QString &text) {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "文本字符") {
+        // Ensure we don't exceed the array size
+        QByteArray utf8Data = text.toUtf8();
+        int length = qMin(utf8Data.length(), 29); // Max 29 chars to leave room for null terminator
+
+        // Copy the string to the data array
+        memcpy(shapes[selectedShapeIndex].specific.text.data, utf8Data.constData(), length);
+        shapes[selectedShapeIndex].specific.text.data[length] = '\0'; // Null-terminate
+        shapes[selectedShapeIndex].specific.text.length = length;
+
+        update();
+    }
+}
+
+void DragDropImageLabel::setTextFontSize(int fontSize) {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "文本字符") {
+        shapes[selectedShapeIndex].specific.text.fontSize = qBound(8, fontSize, 72);
+        update();
+    }
+}
+
 // ShapeListItem 实现
 ShapeListItem::ShapeListItem(const QString &text, QListWidget *parent)
     : QListWidgetItem(text, parent) {
@@ -1294,6 +1387,15 @@ void MainWindow::changeFloatProperties(int) {
         imageLabel->getSelectedShapeType() == "浮点数") {
         imageLabel->setFloatValue(floatValueSpinBox->value());
         imageLabel->setFloatFontSize(floatFontSizeSpinBox->value());
+    }
+}
+
+void MainWindow::changeTextProperties() {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
+    if (imageLabel && imageLabel->hasSelectedShape() &&
+        imageLabel->getSelectedShapeType() == "文本字符") {
+        imageLabel->setText(textLineEdit->text());
+        imageLabel->setTextFontSize(textFontSizeSpinBox->value());
     }
 }
 
@@ -1444,6 +1546,17 @@ void MainWindow::updatePropertyControls() {
 
         floatValueSpinBox->blockSignals(false);
         floatFontSizeSpinBox->blockSignals(false);
+    }     else if (shapeType == "文本字符") {
+        shapeSpecificControls->setCurrentWidget(textPropertiesWidget);
+
+        textLineEdit->blockSignals(true);
+        textFontSizeSpinBox->blockSignals(true);
+
+        textLineEdit->setText(imageLabel->getSelectedShapeText());
+        textFontSizeSpinBox->setValue(imageLabel->getSelectedShapeTextFontSize());
+
+        textLineEdit->blockSignals(false);
+        textFontSizeSpinBox->blockSignals(false);
     }
 }
 
@@ -1484,6 +1597,9 @@ void MainWindow::createShapeToolbar() {
 
     auto *floatValueItem = new ShapeListItem(tr("浮点数"), shapesListWidget);
     floatValueItem->setIcon(QIcon(createShapeIcon("浮点数")));
+
+    auto *textItem = new ShapeListItem(tr("文本字符"), shapesListWidget);
+    textItem->setIcon(QIcon(createShapeIcon("文本字符")));
 
     shapesDock->setWidget(shapesListWidget);
     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
@@ -1737,7 +1853,31 @@ void MainWindow::createShapeToolbar() {
     floatValueLayout->addWidget(floatFontSizeSpinBox);
     floatValueLayout->addStretch();
 
+    // Create text properties widget
+    textPropertiesWidget = new QWidget();
+    QVBoxLayout *textLayout = new QVBoxLayout(textPropertiesWidget);
+
+    QLabel *textValueLabel = new QLabel(tr("文本内容:"));
+    textLineEdit = new QLineEdit();
+    textLineEdit->setMaxLength(30); // Limit to 30 characters
+    connect(textLineEdit, &QLineEdit::textChanged,
+            this, &MainWindow::changeTextProperties);
+
+    QLabel *textFontSizeLabel = new QLabel(tr("字体大小:"));
+    textFontSizeSpinBox = new QSpinBox();
+    textFontSizeSpinBox->setRange(8, 72);
+    textFontSizeSpinBox->setSingleStep(1);
+    connect(textFontSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeTextProperties);
+
+    textLayout->addWidget(textValueLabel);
+    textLayout->addWidget(textLineEdit);
+    textLayout->addWidget(textFontSizeLabel);
+    textLayout->addWidget(textFontSizeSpinBox);
+    textLayout->addStretch();
+
     // Add to your stacked widget:
+    shapeSpecificControls->addWidget(textPropertiesWidget);
     shapeSpecificControls->addWidget(floatValuePropertiesWidget);
     shapeSpecificControls->addWidget(intValuePropertiesWidget);
     shapeSpecificControls->addWidget(arcPropertiesWidget);
@@ -1845,6 +1985,10 @@ QPixmap MainWindow::createShapeIcon(const QString &shape) {
         painter.setPen(QPen(Qt::black, 2));
         painter.setFont(QFont("Arial", 12));
         painter.drawText(5, 25, "1.234");
+    } else if (shape == "文本字符") {
+        painter.setPen(QPen(Qt::black, 2));
+        painter.setFont(QFont("Arial", 12));
+        painter.drawText(5, 25, "ABC");
     }
 
     return pixmap;
