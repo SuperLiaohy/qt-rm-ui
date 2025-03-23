@@ -154,6 +154,11 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
         // Set default end point to be 100 units away from starting point
         shape.specific.rect.endX = absX + 100;
         shape.specific.rect.endY = absY + 100;
+    } else if (shape.type == "直线") {
+        shape.color = Qt::green;
+        // Set default end point to be 100 units away from starting point
+        shape.specific.line.endX = absX + 100;
+        shape.specific.line.endY = absY + 100;
     }
     shape.borderWidth = 2;
 
@@ -254,6 +259,30 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
             }
 
             painter.drawRect(rectArea);
+        }
+        else if (shape.type == "直线") {
+            // Convert from absolute coordinates to screen coordinates
+            double startRelX = (double)shape.x / 1920 * originalPixmap.width();
+            double startRelY = (double)shape.y / 1080 * originalPixmap.height();
+            double endRelX = (double)shape.specific.line.endX / 1920 * originalPixmap.width();
+            double endRelY = (double)shape.specific.line.endY / 1080 * originalPixmap.height();
+
+            int imgStartX = x + startRelX * scaleX;
+            int imgStartY = y + startRelY * scaleY;
+            int imgEndX = x + endRelX * scaleX;
+            int imgEndY = y + endRelY * scaleY;
+
+            // Draw selection indicators if selected
+            if (idx == selectedShapeIndex) {
+                // Draw start point indicator
+                painter.drawRect(imgStartX - 3, imgStartY - 3, 6, 6);
+                // Draw end point indicator
+                painter.drawRect(imgEndX - 3, imgEndY - 3, 6, 6);
+
+                painter.setPen(QPen(shape.color, shape.borderWidth));
+            }
+
+            painter.drawLine(imgStartX, imgStartY, imgEndX, imgEndY);
         }
     }
 }
@@ -394,6 +423,69 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
                 break;
             }
         }
+                else if (shape.type == "直线") {
+            // Convert line coordinates to screen coordinates
+            double startRelX = (double)shape.x / 1920 * originalPixmap.width();
+            double startRelY = (double)shape.y / 1080 * originalPixmap.height();
+            double endRelX = (double)shape.specific.line.endX / 1920 * originalPixmap.width();
+            double endRelY = (double)shape.specific.line.endY / 1080 * originalPixmap.height();
+
+            int imgStartX = x + startRelX * scaleX;
+            int imgStartY = y + startRelY * scaleY;
+            int imgEndX = x + endRelX * scaleX;
+            int imgEndY = y + endRelY * scaleY;
+
+            // Create hit points for start and end points
+            QPoint startPoint(imgStartX, imgStartY);
+            QPoint endPoint(imgEndX, imgEndY);
+
+            int cornerSize = 10; // Size of endpoint hit area
+
+            // Check if click is on a line endpoint
+            if ((event->pos() - startPoint).manhattanLength() <= cornerSize) {
+                selectedShapeIndex = i;
+                dragMode = DRAG_RECTANGLE_CORNER;
+                dragCorner = 0; // Start point
+                break;
+            } else if ((event->pos() - endPoint).manhattanLength() <= cornerSize) {
+                selectedShapeIndex = i;
+                dragMode = DRAG_RECTANGLE_CORNER;
+                dragCorner = 1; // End point
+                break;
+            }
+
+            // Calculate distance from click to line
+            QLineF line(startPoint, endPoint);
+            QPointF clickPos(event->pos());
+
+            // Project point onto line to find perpendicular distance
+            QLineF normal = line.normalVector();
+            normal.translate(clickPos - line.p1());
+            QPointF intersection;
+            line.intersects(normal, &intersection);
+
+            qreal distance = QLineF(clickPos, intersection).length();
+
+            // Check if click is close enough to line
+            int selectionWidth = qMax(5, shape.borderWidth);
+            if (distance <= selectionWidth &&
+                QLineF(line.p1(), intersection).length() <= line.length() &&
+                QLineF(line.p2(), intersection).length() <= line.length()) {
+                selectedShapeIndex = i;
+                dragMode = DRAG_SHAPE;
+
+                // Store exact click point relative to shape
+                QPoint clickOffset = event->pos() - startPoint;
+
+                // Calculate the offset in original coordinates
+                dragStartPos = QPoint(
+                    clickOffset.x() / scaleX * 1920 / originalPixmap.width(),
+                    clickOffset.y() / scaleY * 1080 / originalPixmap.height()
+                );
+                break;
+            }
+        }
+
     }
 
     update();
@@ -439,6 +531,18 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
             shapes[selectedShapeIndex].specific.rect.endX = shapes[selectedShapeIndex].x + width;
             shapes[selectedShapeIndex].specific.rect.endY = shapes[selectedShapeIndex].y + height;
         }
+        // For lines, we need to move the end point too to maintain shape
+        if (shapes[selectedShapeIndex].type == "直线") {
+            // Calculate the width and height of the line
+            int width = shapes[selectedShapeIndex].specific.line.endX -
+                      (mouseX - dragStartPos.x() - newX + shapes[selectedShapeIndex].x);
+            int height = shapes[selectedShapeIndex].specific.line.endY -
+                       (mouseY - dragStartPos.y() - newY + shapes[selectedShapeIndex].y);
+
+            // Update end point to maintain line dimensions
+            shapes[selectedShapeIndex].specific.line.endX = shapes[selectedShapeIndex].x + width;
+            shapes[selectedShapeIndex].specific.line.endY = shapes[selectedShapeIndex].y + height;
+        }
 
         update();
         emit selectionChanged();
@@ -472,6 +576,28 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
 
         update();
         emit selectionChanged();
+    }
+    else if (dragMode == DRAG_RECTANGLE_CORNER && shapes[selectedShapeIndex].type == "直线") {
+        // Convert mouse position to absolute coordinates (0-1920, 0-1080)
+            int mouseX = qRound((event->pos().x() - x) * scaleX * 1920 / originalPixmap.width());
+            int mouseY = qRound((event->pos().y() - y) * scaleY * 1080 / originalPixmap.height());
+
+            // Constrain to image bounds
+            mouseX = qBound(0, mouseX, 1920);
+            mouseY = qBound(0, mouseY, 1080);
+
+            if (dragCorner == 0) { // Start point
+                shapes[selectedShapeIndex].x = mouseX;
+                shapes[selectedShapeIndex].y = mouseY;
+            }
+            else if (dragCorner == 1) { // End point
+                shapes[selectedShapeIndex].specific.line.endX = mouseX;
+                shapes[selectedShapeIndex].specific.line.endY = mouseY;
+            }
+
+            update();
+            emit selectionChanged();
+
     }
 }
 bool DragDropImageLabel::hasSelectedShape() const
@@ -633,7 +759,15 @@ void DragDropImageLabel::setCircleRadius(int radius)
         }
 }
 
-
+void DragDropImageLabel::setLineEndPoint(int x, int y)
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "直线") {
+        shapes[selectedShapeIndex].specific.line.endX = x;
+        shapes[selectedShapeIndex].specific.line.endY = y;
+        update();
+        }
+}
 
 // ShapeListItem 实现
 ShapeListItem::ShapeListItem(const QString &text, QListWidget *parent)
@@ -699,6 +833,15 @@ void MainWindow::changeCircleRadius(int radius)
         imageLabel->getSelectedShapeType() == "圆形") {
         imageLabel->setCircleRadius(radius);
     }
+}
+
+void MainWindow::changeLineEndPoint(int)
+{
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel && imageLabel->hasSelectedShape() &&
+        imageLabel->getSelectedShapeType() == "直线") {
+        imageLabel->setLineEndPoint(lineEndXSpinBox->value(), lineEndYSpinBox->value());
+        }
 }
 
 void ShapeListWidget::startDrag(Qt::DropActions supportedActions)
@@ -785,6 +928,20 @@ void MainWindow::updatePropertyControls()
         // Show circle properties panel
         shapeSpecificControls->setCurrentWidget(circlePropertiesWidget);
     }
+    else if (shapeType == "直线") {
+        // Set up line-specific controls
+        lineEndXSpinBox->blockSignals(true);
+        lineEndYSpinBox->blockSignals(true);
+
+        lineEndXSpinBox->setValue(imageLabel->getSelectedShapeEndX());
+        lineEndYSpinBox->setValue(imageLabel->getSelectedShapeEndY());
+
+        lineEndXSpinBox->blockSignals(false);
+        lineEndYSpinBox->blockSignals(false);
+
+        // Show line properties panel
+        shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
+    }
 }
 // Modified version of createShapeToolbar to include shape-specific property controls
 void MainWindow::createShapeToolbar()
@@ -806,6 +963,10 @@ void MainWindow::createShapeToolbar()
 
     auto *rectItem = new ShapeListItem(tr("矩形"), shapesListWidget);
     rectItem->setIcon(QIcon(createShapeIcon("矩形")));
+
+    // Add this to your createShapeToolbar() method after the rectangle item
+    auto *lineItem = new ShapeListItem(tr("直线"), shapesListWidget);
+    lineItem->setIcon(QIcon(createShapeIcon("直线")));
 
     shapesDock->setWidget(shapesListWidget);
     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
@@ -917,6 +1078,35 @@ void MainWindow::createShapeToolbar()
     circleLayout->addWidget(circleRadiusSpinBox);
     circleLayout->addStretch();
 
+
+    // Add after circle properties widget setup
+    // Line properties
+    linePropertiesWidget = new QWidget();
+    QVBoxLayout *lineLayout = new QVBoxLayout(linePropertiesWidget);
+
+    QLabel *lineEndXLabel = new QLabel(tr("终点X坐标:"));
+    lineEndXSpinBox = new QSpinBox();
+    lineEndXSpinBox->setRange(0, 1920);
+    lineEndXSpinBox->setSingleStep(1);
+    connect(lineEndXSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeLineEndPoint);
+
+    QLabel *lineEndYLabel = new QLabel(tr("终点Y坐标:"));
+    lineEndYSpinBox = new QSpinBox();
+    lineEndYSpinBox->setRange(0, 1080);
+    lineEndYSpinBox->setSingleStep(1);
+    connect(lineEndYSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeLineEndPoint);
+
+    lineLayout->addWidget(lineEndXLabel);
+    lineLayout->addWidget(lineEndXSpinBox);
+    lineLayout->addWidget(lineEndYLabel);
+    lineLayout->addWidget(lineEndYSpinBox);
+    lineLayout->addStretch();
+
+    // Add widgets to stacked widget
+    shapeSpecificControls->addWidget(linePropertiesWidget);
+
     // Add widgets to stacked widget
     shapeSpecificControls->addWidget(rectanglePropertiesWidget);
     shapeSpecificControls->addWidget(circlePropertiesWidget);
@@ -1012,6 +1202,9 @@ QPixmap MainWindow::createShapeIcon(const QString &shape)
     } else if (shape == "矩形") {
         painter.setPen(QPen(Qt::blue, 2));
         painter.drawRect(5, 5, 30, 30);
+    } else if (shape == "直线") {
+        painter.setPen(QPen(Qt::green, 2));
+        painter.drawLine(5, 5, 35, 35);
     }
 
     return pixmap;

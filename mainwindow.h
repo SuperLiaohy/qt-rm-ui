@@ -69,6 +69,7 @@ public:
     int getSelectedShapeRadius() const;
     void setRectangleEndPoint(int x, int y);
     void setCircleRadius(int radius);
+    void setLineEndPoint(int x, int y);
 
     // Get shape type
     QString getSelectedShapeType() const;
@@ -109,6 +110,11 @@ private:
             struct {
                 int radius; // Radius for circle
             } circle;
+
+            struct {
+                int endX;   // End X coordinate for line
+                int endY;   // End Y coordinate for line
+            } line;
         } specific;
     };
 
@@ -157,6 +163,7 @@ private slots:
     void changeCircleRadius(int);
     void updatePropertyControls();
     void onShapeSelectionChanged();
+    void changeLineEndPoint(int);
 
 private:
     Ui::MainWindow *ui;
@@ -187,6 +194,11 @@ private:
     // Circle-specific controls
     QWidget *circlePropertiesWidget;
     QSpinBox *circleRadiusSpinBox;
+
+    // Add to MainWindow class declaration in the private section
+    QWidget *linePropertiesWidget;
+    QSpinBox *lineEndXSpinBox;
+    QSpinBox *lineEndYSpinBox;
 
     // Helper methods
     void createShapeToolbar();
