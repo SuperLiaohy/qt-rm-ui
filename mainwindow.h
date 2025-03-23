@@ -73,7 +73,11 @@ public:
     void setEllipseRadius(int radiusX, int radiusY);
     int getSelectedShapeRadiusX() const;
     int getSelectedShapeRadiusY() const;
-
+    void setArcProperties(int radiusX, int radiusY, int startAngle, int spanAngle);
+    int getSelectedShapeArcRadiusX() const;
+    int getSelectedShapeArcRadiusY() const;
+    int getSelectedShapeArcStartAngle() const;
+    int getSelectedShapeArcSpanAngle() const;
 
     // Get shape type
     QString getSelectedShapeType() const;
@@ -124,6 +128,13 @@ private:
                 int radiusX;  // X-axis radius for ellipse
                 int radiusY;  // Y-axis radius for ellipse
             } ellipse;
+
+            struct {
+                int radiusX;    // X-axis radius for arc
+                int radiusY;    // Y-axis radius for arc
+                int startAngle; // Start angle in degrees (0° is 12 o'clock, clockwise)
+                int spanAngle;  // Span angle in degrees
+            } arc;
         } specific;
     };
 
@@ -174,6 +185,7 @@ private slots:
     void onShapeSelectionChanged();
     void changeLineEndPoint(int);
     void changeEllipseRadius(int);
+    void changeArcProperties(int);
 
 private:
     Ui::MainWindow *ui;
@@ -214,6 +226,13 @@ private:
     QWidget *ellipsePropertiesWidget;
     QSpinBox *ellipseRadiusXSpinBox;
     QSpinBox *ellipseRadiusYSpinBox;
+
+    // Arc-specific controls
+    QWidget *arcPropertiesWidget;
+    QSpinBox *arcRadiusXSpinBox;
+    QSpinBox *arcRadiusYSpinBox;
+    QSpinBox *arcStartAngleSpinBox;
+    QSpinBox *arcSpanAngleSpinBox;
 
     // Helper methods
     void createShapeToolbar();

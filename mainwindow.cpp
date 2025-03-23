@@ -16,8 +16,7 @@
 #include <QVBoxLayout>
 #include <cmath>
 // DragDropImageLabel 实现
-DragDropImageLabel::DragDropImageLabel(QWidget *parent) : QLabel(parent)
-{
+DragDropImageLabel::DragDropImageLabel(QWidget *parent) : QLabel(parent) {
     setAcceptDrops(true); // 允许接收拖放
 
     // Initially all layers are visible
@@ -27,9 +26,7 @@ DragDropImageLabel::DragDropImageLabel(QWidget *parent) : QLabel(parent)
 }
 
 
-
-void DragDropImageLabel::setOriginalPixmap(const QPixmap &pixmap)
-{
+void DragDropImageLabel::setOriginalPixmap(const QPixmap &pixmap) {
     // 保存原始图片
     originalPixmap = pixmap;
 
@@ -37,8 +34,7 @@ void DragDropImageLabel::setOriginalPixmap(const QPixmap &pixmap)
     update();
 }
 
-void DragDropImageLabel::dragEnterEvent(QDragEnterEvent *event)
-{
+void DragDropImageLabel::dragEnterEvent(QDragEnterEvent *event) {
     // 检查拖动的数据是否包含我们需要的格式
     if (event->mimeData()->hasText()) {
         event->acceptProposedAction();
@@ -46,16 +42,14 @@ void DragDropImageLabel::dragEnterEvent(QDragEnterEvent *event)
 }
 
 // Add these two methods to DragDropImageLabel class:
-int DragDropImageLabel::getSelectedShapeX() const
-{
+int DragDropImageLabel::getSelectedShapeX() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         return shapes[selectedShapeIndex].x;
     }
     return 0;
 }
 
-int DragDropImageLabel::getSelectedShapeY() const
-{
+int DragDropImageLabel::getSelectedShapeY() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         return shapes[selectedShapeIndex].y;
     }
@@ -112,8 +106,7 @@ int DragDropImageLabel::getSelectedShapeY() const
 //     }
 // }
 
-void DragDropImageLabel::dropEvent(QDropEvent *event)
-{
+void DragDropImageLabel::dropEvent(QDropEvent *event) {
     if (originalPixmap.isNull())
         return;
 
@@ -130,8 +123,8 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
         return;
     }
 
-    double scaleX = (double)originalPixmap.width() / scaledSize.width();
-    double scaleY = (double)originalPixmap.height() / scaledSize.height();
+    double scaleX = (double) originalPixmap.width() / scaledSize.width();
+    double scaleY = (double) originalPixmap.height() / scaledSize.height();
 
     double relX = (event->pos().x() - x) * scaleX;
     double relY = (event->pos().y() - y) * scaleY;
@@ -163,6 +156,12 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
         shape.color = Qt::magenta;
         shape.specific.ellipse.radiusX = 50; // Default X radius
         shape.specific.ellipse.radiusY = 30; // Default Y radius
+    } else if (shape.type == "圆弧") {
+        shape.color = Qt::cyan;
+        shape.specific.arc.radiusX = 50; // Default X radius
+        shape.specific.arc.radiusY = 30; // Default Y radius
+        shape.specific.arc.startAngle = 0; // Start at 12 o'clock
+        shape.specific.arc.spanAngle = 180; // Default 90° arc (quarter circle)
     }
 
     shapes.append(shape);
@@ -171,8 +170,7 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
     event->acceptProposedAction();
 }
 
-void DragDropImageLabel::paintEvent(QPaintEvent *event)
-{
+void DragDropImageLabel::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
     painter.fillRect(rect(), QColor(240, 240, 240));
 
@@ -188,8 +186,8 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
 
     painter.drawPixmap(x, y, scaledSize.width(), scaledSize.height(), originalPixmap);
 
-    double scaleX = (double)scaledSize.width() / originalPixmap.width();
-    double scaleY = (double)scaledSize.height() / originalPixmap.height();
+    double scaleX = (double) scaledSize.width() / originalPixmap.width();
+    double scaleY = (double) scaledSize.height() / originalPixmap.height();
 
     painter.setRenderHint(QPainter::Antialiasing);
 
@@ -204,10 +202,10 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
 
     // Sort indices by layer (lower layers first)
     std::sort(sortedIndices.begin(), sortedIndices.end(),
-        [this](int a, int b) { return shapes[a].layer < shapes[b].layer; });
+              [this](int a, int b) { return shapes[a].layer < shapes[b].layer; });
 
     // Draw shapes according to layer order
-    for (int idx : sortedIndices) {
+    for (int idx: sortedIndices) {
         const auto &shape = shapes[idx];
 
         // Set pen based on selection state
@@ -219,18 +217,18 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
 
         if (shape.type == "圆形") {
             // Convert from absolute coordinates to screen coordinates
-            double relX = (double)shape.x / 1920 * originalPixmap.width();
-            double relY = (double)shape.y / 1080 * originalPixmap.height();
+            double relX = (double) shape.x / 1920 * originalPixmap.width();
+            double relY = (double) shape.y / 1080 * originalPixmap.height();
 
             int imgX = x + relX * scaleX;
             int imgY = y + relY * scaleY;
 
             // Convert radius from absolute to screen coordinates
-            double radiusRel = (double)shape.specific.circle.radius / 1920 * originalPixmap.width();
+            double radiusRel = (double) shape.specific.circle.radius / 1920 * originalPixmap.width();
             int radiusScreen = radiusRel * scaleX;
 
             QRect circleRect(imgX - radiusScreen, imgY - radiusScreen,
-                            radiusScreen * 2, radiusScreen * 2);
+                             radiusScreen * 2, radiusScreen * 2);
 
             // Draw selection rectangle if selected
             if (idx == selectedShapeIndex) {
@@ -239,13 +237,12 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
             }
 
             painter.drawEllipse(circleRect);
-        }
-        else if (shape.type == "矩形") {
+        } else if (shape.type == "矩形") {
             // Convert from absolute coordinates to screen coordinates
-            double startRelX = (double)shape.x / 1920 * originalPixmap.width();
-            double startRelY = (double)shape.y / 1080 * originalPixmap.height();
-            double endRelX = (double)shape.specific.rect.endX / 1920 * originalPixmap.width();
-            double endRelY = (double)shape.specific.rect.endY / 1080 * originalPixmap.height();
+            double startRelX = (double) shape.x / 1920 * originalPixmap.width();
+            double startRelY = (double) shape.y / 1080 * originalPixmap.height();
+            double endRelX = (double) shape.specific.rect.endX / 1920 * originalPixmap.width();
+            double endRelY = (double) shape.specific.rect.endY / 1080 * originalPixmap.height();
 
             int imgStartX = x + startRelX * scaleX;
             int imgStartY = y + startRelY * scaleY;
@@ -253,7 +250,7 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
             int imgEndY = y + endRelY * scaleY;
 
             QRect rectArea(QPoint(qMin(imgStartX, imgEndX), qMin(imgStartY, imgEndY)),
-                          QPoint(qMax(imgStartX, imgEndX), qMax(imgStartY, imgEndY)));
+                           QPoint(qMax(imgStartX, imgEndX), qMax(imgStartY, imgEndY)));
 
             // Draw selection rectangle if selected
             if (idx == selectedShapeIndex) {
@@ -262,13 +259,12 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
             }
 
             painter.drawRect(rectArea);
-        }
-        else if (shape.type == "直线") {
+        } else if (shape.type == "直线") {
             // Convert from absolute coordinates to screen coordinates
-            double startRelX = (double)shape.x / 1920 * originalPixmap.width();
-            double startRelY = (double)shape.y / 1080 * originalPixmap.height();
-            double endRelX = (double)shape.specific.line.endX / 1920 * originalPixmap.width();
-            double endRelY = (double)shape.specific.line.endY / 1080 * originalPixmap.height();
+            double startRelX = (double) shape.x / 1920 * originalPixmap.width();
+            double startRelY = (double) shape.y / 1080 * originalPixmap.height();
+            double endRelX = (double) shape.specific.line.endX / 1920 * originalPixmap.width();
+            double endRelY = (double) shape.specific.line.endY / 1080 * originalPixmap.height();
 
             int imgStartX = x + startRelX * scaleX;
             int imgStartY = y + startRelY * scaleY;
@@ -286,23 +282,22 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
             }
 
             painter.drawLine(imgStartX, imgStartY, imgEndX, imgEndY);
-        }
-        else if (shape.type == "椭圆") {
+        } else if (shape.type == "椭圆") {
             // Convert from absolute coordinates to screen coordinates
-            double relX = (double)shape.x / 1920 * originalPixmap.width();
-            double relY = (double)shape.y / 1080 * originalPixmap.height();
+            double relX = (double) shape.x / 1920 * originalPixmap.width();
+            double relY = (double) shape.y / 1080 * originalPixmap.height();
 
             int imgX = x + relX * scaleX;
             int imgY = y + relY * scaleY;
 
             // Convert radii from absolute to screen coordinates
-            double radiusXRel = (double)shape.specific.ellipse.radiusX / 1920 * originalPixmap.width();
-            double radiusYRel = (double)shape.specific.ellipse.radiusY / 1080 * originalPixmap.height();
+            double radiusXRel = (double) shape.specific.ellipse.radiusX / 1920 * originalPixmap.width();
+            double radiusYRel = (double) shape.specific.ellipse.radiusY / 1080 * originalPixmap.height();
             int radiusXScreen = radiusXRel * scaleX;
             int radiusYScreen = radiusYRel * scaleY;
 
             QRect ellipseRect(imgX - radiusXScreen, imgY - radiusYScreen,
-                            radiusXScreen * 2, radiusYScreen * 2);
+                              radiusXScreen * 2, radiusYScreen * 2);
 
             // Draw selection rectangle if selected
             if (idx == selectedShapeIndex) {
@@ -311,18 +306,70 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
             }
 
             painter.drawEllipse(ellipseRect);
+        } else if (shape.type == "圆弧") {
+            // Convert from absolute coordinates to screen coordinates
+            double relX = (double) shape.x / 1920 * originalPixmap.width();
+            double relY = (double) shape.y / 1080 * originalPixmap.height();
+            int imgX = x + relX * scaleX;
+            int imgY = y + relY * scaleY;
+
+            // Convert radii from absolute to screen coordinates
+            double radiusXRel = (double) shape.specific.arc.radiusX / 1920 * originalPixmap.width();
+            double radiusYRel = (double) shape.specific.arc.radiusY / 1080 * originalPixmap.height();
+            int radiusXScreen = radiusXRel * scaleX;
+            int radiusYScreen = radiusYRel * scaleY;
+
+            QRect arcRect(imgX - radiusXScreen, imgY - radiusYScreen,
+                          radiusXScreen * 2, radiusYScreen * 2);
+
+            // Draw selection rectangle if selected
+            if (idx == selectedShapeIndex) {
+                // Draw bounding box
+                painter.setPen(QPen(Qt::blue, 1, Qt::DashLine));
+                painter.drawRect(arcRect);
+
+                // Draw control points
+                int startAngle = shape.specific.arc.startAngle;
+                int spanAngle = shape.specific.arc.spanAngle;
+
+                // Calculate points on the arc at start and end angles
+                // Calculate points on the arc at start and end angles (in 12 o'clock=0° system)
+                double startAngleRad = shape.specific.arc.startAngle * M_PI / 180.0;
+                double endAngleRad = (shape.specific.arc.startAngle + shape.specific.arc.spanAngle) * M_PI / 180.0;
+
+                // Convert from 12 o'clock=0° to standard math angles (0° at 3 o'clock)
+                startAngleRad = M_PI / 2 - startAngleRad;
+                endAngleRad = M_PI / 2 - endAngleRad;
+
+                int startX = imgX + radiusXScreen * cos(startAngleRad);
+                int startY = imgY - radiusYScreen * sin(startAngleRad);
+                int endX = imgX + radiusXScreen * cos(endAngleRad);
+                int endY = imgY - radiusYScreen * sin(endAngleRad);
+
+                // Draw control points
+                painter.fillRect(QRect(imgX - 4, imgY - 4, 8, 8), Qt::blue); // Center
+                painter.fillRect(QRect(startX - 4, startY - 4, 8, 8), Qt::red); // Start angle
+                painter.fillRect(QRect(endX - 4, endY - 4, 8, 8), Qt::green); // End angle
+            }
+
+            // Draw the arc (Note: Qt uses 16ths of a degree)
+            // Draw the arc
+            painter.setPen(QPen(shape.color, shape.borderWidth));
+            // Convert from 12 o'clock=0°/clockwise to Qt's 3 o'clock=0°/counter-clockwise system
+            int qtStartAngle = (90 - shape.specific.arc.startAngle) * 16;
+            int qtSpanAngle = -shape.specific.arc.spanAngle * 16; // Negative for clockwise
+            painter.drawArc(arcRect, qtStartAngle, qtSpanAngle);
         }
     }
 }
 
 // Add mouse event handlers to DragDropImageLabel
-void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
-{
+void DragDropImageLabel::mousePressEvent(QMouseEvent *event) {
     if (originalPixmap.isNull())
         return;
 
     int oldSelection = selectedShapeIndex;
-    selectedShapeIndex = -1;  // Reset selection first
+    selectedShapeIndex = -1; // Reset selection first
     dragMode = DRAG_NONE;
 
     QSize scaledSize = originalPixmap.size();
@@ -339,8 +386,8 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    double scaleX = (double)scaledSize.width() / originalPixmap.width();
-    double scaleY = (double)scaledSize.height() / originalPixmap.height();
+    double scaleX = (double) scaledSize.width() / originalPixmap.width();
+    double scaleY = (double) scaledSize.height() / originalPixmap.height();
 
     // Check shapes in reverse order (top to bottom) to select the topmost shape first
     for (int i = shapes.size() - 1; i >= 0; i--) {
@@ -353,13 +400,13 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
 
         if (shape.type == "圆形") {
             // Convert center point to screen coordinates
-            double relX = (double)shape.x / 1920 * originalPixmap.width();
-            double relY = (double)shape.y / 1080 * originalPixmap.height();
+            double relX = (double) shape.x / 1920 * originalPixmap.width();
+            double relY = (double) shape.y / 1080 * originalPixmap.height();
             int imgX = x + relX * scaleX;
             int imgY = y + relY * scaleY;
 
             // Convert radius to screen coordinates
-            double radiusRel = (double)shape.specific.circle.radius / 1920 * originalPixmap.width();
+            double radiusRel = (double) shape.specific.circle.radius / 1920 * originalPixmap.width();
             int radiusScreen = radiusRel * scaleX;
 
             // Calculate distance from click to center
@@ -382,13 +429,12 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
                 );
                 break;
             }
-        }
-        else if (shape.type == "矩形") {
+        } else if (shape.type == "矩形") {
             // Convert rectangle coordinates to screen coordinates
-            double startRelX = (double)shape.x / 1920 * originalPixmap.width();
-            double startRelY = (double)shape.y / 1080 * originalPixmap.height();
-            double endRelX = (double)shape.specific.rect.endX / 1920 * originalPixmap.width();
-            double endRelY = (double)shape.specific.rect.endY / 1080 * originalPixmap.height();
+            double startRelX = (double) shape.x / 1920 * originalPixmap.width();
+            double startRelY = (double) shape.y / 1080 * originalPixmap.height();
+            double endRelX = (double) shape.specific.rect.endX / 1920 * originalPixmap.width();
+            double endRelY = (double) shape.specific.rect.endY / 1080 * originalPixmap.height();
 
             int imgStartX = x + startRelX * scaleX;
             int imgStartY = y + startRelY * scaleY;
@@ -450,13 +496,12 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
                 );
                 break;
             }
-        }
-                else if (shape.type == "直线") {
+        } else if (shape.type == "直线") {
             // Convert line coordinates to screen coordinates
-            double startRelX = (double)shape.x / 1920 * originalPixmap.width();
-            double startRelY = (double)shape.y / 1080 * originalPixmap.height();
-            double endRelX = (double)shape.specific.line.endX / 1920 * originalPixmap.width();
-            double endRelY = (double)shape.specific.line.endY / 1080 * originalPixmap.height();
+            double startRelX = (double) shape.x / 1920 * originalPixmap.width();
+            double startRelY = (double) shape.y / 1080 * originalPixmap.height();
+            double endRelX = (double) shape.specific.line.endX / 1920 * originalPixmap.width();
+            double endRelY = (double) shape.specific.line.endY / 1080 * originalPixmap.height();
 
             int imgStartX = x + startRelX * scaleX;
             int imgStartY = y + startRelY * scaleY;
@@ -512,52 +557,141 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
                 );
                 break;
             }
-        }
-                else if (shape.type == "椭圆") {
-                    // Convert center point to screen coordinates
-                    double relX = (double)shape.x / 1920 * originalPixmap.width();
-                    double relY = (double)shape.y / 1080 * originalPixmap.height();
-                    int imgX = x + relX * scaleX;
-                    int imgY = y + relY * scaleY;
+        } else if (shape.type == "椭圆") {
+            // Convert center point to screen coordinates
+            double relX = (double) shape.x / 1920 * originalPixmap.width();
+            double relY = (double) shape.y / 1080 * originalPixmap.height();
+            int imgX = x + relX * scaleX;
+            int imgY = y + relY * scaleY;
 
-                    // Convert radii to screen coordinates
-                    double radiusXRel = (double)shape.specific.ellipse.radiusX / 1920 * originalPixmap.width();
-                    double radiusYRel = (double)shape.specific.ellipse.radiusY / 1080 * originalPixmap.height();
-                    int radiusXScreen = radiusXRel * scaleX;
-                    int radiusYScreen = radiusYRel * scaleY;
+            // Convert radii to screen coordinates
+            double radiusXRel = (double) shape.specific.ellipse.radiusX / 1920 * originalPixmap.width();
+            double radiusYRel = (double) shape.specific.ellipse.radiusY / 1080 * originalPixmap.height();
+            int radiusXScreen = radiusXRel * scaleX;
+            int radiusYScreen = radiusYRel * scaleY;
 
-                    // Calculate position relative to ellipse center
-                    int relClickX = event->pos().x() - imgX;
-                    int relClickY = event->pos().y() - imgY;
+            // Calculate position relative to ellipse center
+            int relClickX = event->pos().x() - imgX;
+            int relClickY = event->pos().y() - imgY;
 
-                    // Simpler approach: check if point is close to the ellipse boundary
-                    // Formula for point (x,y) on ellipse with center (0,0): (x²/a²) + (y²/b²) = 1
-                    // Where a and b are the semi-major and semi-minor axes
-                    double normalizedDistSquared =
-                        (relClickX * relClickX) / (radiusXScreen * radiusXScreen) +
-                        (relClickY * relClickY) / (radiusYScreen * radiusYScreen);
+            // Calculate the normalized distance from click to ellipse boundary
+            double normalizedDistSquared =
+                    pow(relClickX / (double) radiusXScreen, 2) +
+                    pow(relClickY / (double) radiusYScreen, 2);
+            double normalizedDist = sqrt(normalizedDistSquared);
 
-                    // Selection tolerance (distance from the ellipse boundary)
-                    double selectionWidth = qMax(5, shape.borderWidth);
-                    double innerLimit = pow(1.0 - selectionWidth / qMin(radiusXScreen, radiusYScreen), 2);
-                    double outerLimit = pow(1.0 + selectionWidth / qMin(radiusXScreen, radiusYScreen), 2);
+            // Selection tolerance - set a minimum pixel width of 5 or the border width
+            double pixelTolerance = qMax(5.0, (double) shape.borderWidth);
+            double toleranceNormalized = pixelTolerance / qMin(radiusXScreen, radiusYScreen);
 
-                    if (normalizedDistSquared >= innerLimit && normalizedDistSquared <= outerLimit) {
-                        selectedShapeIndex = i;
-                        dragMode = DRAG_SHAPE;
+            // Check if click is near the ellipse boundary
+            bool nearEllipse = (fabs(normalizedDist - 1.0) <= toleranceNormalized);
 
-                        // Store the offset between click point and shape center
-                        QPoint clickOffset(relClickX, relClickY);
+            // Debug output
+            // qDebug() << "Ellipse click: normalizedDist=" << normalizedDist
+            //          << " tolerance=" << toleranceNormalized
+            //          << " nearEllipse=" << nearEllipse;
 
-                        // Calculate the offset in original coordinates
-                        dragStartPos = QPoint(
-                            clickOffset.x() / scaleX * 1920 / originalPixmap.width(),
-                            clickOffset.y() / scaleY * 1080 / originalPixmap.height()
-                        );
-                        break;
-                    }
+            // Make ellipse selectable by the entire boundary
+            if (nearEllipse) {
+                selectedShapeIndex = i;
+                dragMode = DRAG_SHAPE;
+
+                // Store click position relative to center for dragging
+                dragStartPos = QPoint(
+                    relClickX / scaleX * 1920 / originalPixmap.width(),
+                    relClickY / scaleY * 1080 / originalPixmap.height()
+                );
+
+                emit selectionChanged();
+                update();
+                break;
+            }
+        } else if (shape.type == "圆弧") {
+            // Convert center point to screen coordinates
+            double relX = (double) shape.x / 1920 * originalPixmap.width();
+            double relY = (double) shape.y / 1080 * originalPixmap.height();
+            int imgX = x + relX * scaleX;
+            int imgY = y + relY * scaleY;
+
+            // Convert radii to screen coordinates
+            double radiusXRel = (double) shape.specific.arc.radiusX / 1920 * originalPixmap.width();
+            double radiusYRel = (double) shape.specific.arc.radiusY / 1080 * originalPixmap.height();
+            int radiusXScreen = radiusXRel * scaleX;
+            int radiusYScreen = radiusYRel * scaleY;
+
+            // Calculate position relative to arc center
+            int relClickX = event->pos().x() - imgX;
+            int relClickY = event->pos().y() - imgY;
+
+            // Calculate the normalized distance from click to ellipse boundary
+            double normalizedDistSquared =
+                    pow(relClickX / (double) radiusXScreen, 2) +
+                    pow(relClickY / (double) radiusYScreen, 2);
+            double normalizedDist = sqrt(normalizedDistSquared);
+
+            // Calculate angle in degrees (0-360, 0° at 12 o'clock)
+            double angle = atan2(relClickY, relClickX) * 180.0 / M_PI;
+            // Convert from atan2 (where 0° is at 3 o'clock) to 12 o'clock system
+            double angleDeg = 90 - angle;
+            if (angleDeg < 0) angleDeg += 360.0;
+
+            // Get arc parameters
+            int startAngle = shape.specific.arc.startAngle;
+            int spanAngle = shape.specific.arc.spanAngle;
+            int endAngle = (startAngle + spanAngle) % 360;
+            if (endAngle < 0) endAngle += 360;
+
+            // Selection tolerance - set a minimum pixel width of 5 or the border width
+            double pixelTolerance = qMax(5.0, (double) shape.borderWidth);
+            double toleranceNormalized = pixelTolerance / qMin(radiusXScreen, radiusYScreen);
+
+            // Check if click is near the arc path
+            bool nearArc = (fabs(normalizedDist - 1.0) <= toleranceNormalized);
+
+            // For debugging only
+            bool inAngleRange = false;
+
+            if (spanAngle > 0) {
+                // Clockwise arc
+                if (startAngle <= endAngle) {
+                    inAngleRange = (angleDeg >= startAngle && angleDeg <= endAngle);
+                } else {
+                    inAngleRange = (angleDeg >= startAngle || angleDeg <= endAngle);
                 }
+            } else {
+                // Handle counter-clockwise case
+                if (endAngle <= startAngle) {
+                    inAngleRange = (angleDeg <= startAngle && angleDeg >= endAngle);
+                } else {
+                    inAngleRange = (angleDeg <= startAngle || angleDeg >= endAngle);
+                }
+            }
 
+            // Debug output
+            // qDebug() << "Arc click: angle=" << angleDeg << " start=" << startAngle
+            //          << " end=" << endAngle
+            //          << " inRange=" << inAngleRange
+            //          << " normalizedDist=" << normalizedDist
+            //          << " tolerance=" << toleranceNormalized
+            //          << " nearArc=" << nearArc;
+
+            // THE FIX IS HERE: Make arc selectable by the entire border, not just in the angle range
+            if (nearArc) {
+                selectedShapeIndex = i;
+                dragMode = DRAG_SHAPE;
+
+                // Store click position relative to center for dragging
+                dragStartPos = QPoint(
+                    relClickX / scaleX * 1920 / originalPixmap.width(),
+                    relClickY / scaleY * 1080 / originalPixmap.height()
+                );
+
+                emit selectionChanged();
+                update();
+                break;
+            }
+        }
     }
 
     update();
@@ -565,8 +699,8 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
         emit selectionChanged();
     }
 }
-void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
-{
+
+void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event) {
     if (dragMode == DRAG_NONE || selectedShapeIndex < 0 || selectedShapeIndex >= shapes.size())
         return;
 
@@ -575,8 +709,8 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
     int x = (width() - scaledSize.width()) / 2;
     int y = (height() - scaledSize.height()) / 2;
 
-    double scaleX = (double)originalPixmap.width() / scaledSize.width();
-    double scaleY = (double)originalPixmap.height() / scaledSize.height();
+    double scaleX = (double) originalPixmap.width() / scaledSize.width();
+    double scaleY = (double) originalPixmap.height() / scaledSize.height();
 
     if (dragMode == DRAG_SHAPE) {
         // Convert mouse position to absolute coordinates (0-1920, 0-1080)
@@ -607,9 +741,9 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
         if (shapes[selectedShapeIndex].type == "直线") {
             // Calculate the width and height of the line
             int width = shapes[selectedShapeIndex].specific.line.endX -
-                      (mouseX - dragStartPos.x() - newX + shapes[selectedShapeIndex].x);
+                        (mouseX - dragStartPos.x() - newX + shapes[selectedShapeIndex].x);
             int height = shapes[selectedShapeIndex].specific.line.endY -
-                       (mouseY - dragStartPos.y() - newY + shapes[selectedShapeIndex].y);
+                         (mouseY - dragStartPos.y() - newY + shapes[selectedShapeIndex].y);
 
             // Update end point to maintain line dimensions
             shapes[selectedShapeIndex].specific.line.endX = shapes[selectedShapeIndex].x + width;
@@ -618,8 +752,7 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
 
         update();
         emit selectionChanged();
-    }
-    else if (dragMode == DRAG_RECTANGLE_CORNER && shapes[selectedShapeIndex].type == "矩形") {
+    } else if (dragMode == DRAG_RECTANGLE_CORNER && shapes[selectedShapeIndex].type == "矩形") {
         // Convert mouse position to absolute coordinates (0-1920, 0-1080)
         int mouseX = qRound((event->pos().x() - x) * scaleX * 1920 / originalPixmap.width());
         int mouseY = qRound((event->pos().y() - y) * scaleY * 1080 / originalPixmap.height());
@@ -629,62 +762,61 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event)
         mouseY = qBound(0, mouseY, 1080);
 
         // Update the appropriate corner based on which one is being dragged
-        if (dragCorner == 0) { // Top-left
+        if (dragCorner == 0) {
+            // Top-left
             shapes[selectedShapeIndex].x = mouseX;
             shapes[selectedShapeIndex].y = mouseY;
-        }
-        else if (dragCorner == 1) { // Top-right
+        } else if (dragCorner == 1) {
+            // Top-right
             shapes[selectedShapeIndex].specific.rect.endX = mouseX;
             shapes[selectedShapeIndex].y = mouseY;
-        }
-        else if (dragCorner == 2) { // Bottom-left
+        } else if (dragCorner == 2) {
+            // Bottom-left
             shapes[selectedShapeIndex].x = mouseX;
             shapes[selectedShapeIndex].specific.rect.endY = mouseY;
-        }
-        else if (dragCorner == 3) { // Bottom-right
+        } else if (dragCorner == 3) {
+            // Bottom-right
             shapes[selectedShapeIndex].specific.rect.endX = mouseX;
             shapes[selectedShapeIndex].specific.rect.endY = mouseY;
         }
 
         update();
         emit selectionChanged();
-    }
-    else if (dragMode == DRAG_RECTANGLE_CORNER && shapes[selectedShapeIndex].type == "直线") {
+    } else if (dragMode == DRAG_RECTANGLE_CORNER && shapes[selectedShapeIndex].type == "直线") {
         // Convert mouse position to absolute coordinates (0-1920, 0-1080)
-            int mouseX = qRound((event->pos().x() - x) * scaleX * 1920 / originalPixmap.width());
-            int mouseY = qRound((event->pos().y() - y) * scaleY * 1080 / originalPixmap.height());
+        int mouseX = qRound((event->pos().x() - x) * scaleX * 1920 / originalPixmap.width());
+        int mouseY = qRound((event->pos().y() - y) * scaleY * 1080 / originalPixmap.height());
 
-            // Constrain to image bounds
-            mouseX = qBound(0, mouseX, 1920);
-            mouseY = qBound(0, mouseY, 1080);
+        // Constrain to image bounds
+        mouseX = qBound(0, mouseX, 1920);
+        mouseY = qBound(0, mouseY, 1080);
 
-            if (dragCorner == 0) { // Start point
-                shapes[selectedShapeIndex].x = mouseX;
-                shapes[selectedShapeIndex].y = mouseY;
-            }
-            else if (dragCorner == 1) { // End point
-                shapes[selectedShapeIndex].specific.line.endX = mouseX;
-                shapes[selectedShapeIndex].specific.line.endY = mouseY;
-            }
+        if (dragCorner == 0) {
+            // Start point
+            shapes[selectedShapeIndex].x = mouseX;
+            shapes[selectedShapeIndex].y = mouseY;
+        } else if (dragCorner == 1) {
+            // End point
+            shapes[selectedShapeIndex].specific.line.endX = mouseX;
+            shapes[selectedShapeIndex].specific.line.endY = mouseY;
+        }
 
-            update();
-            emit selectionChanged();
-
+        update();
+        emit selectionChanged();
     }
 }
-bool DragDropImageLabel::hasSelectedShape() const
-{
+
+bool DragDropImageLabel::hasSelectedShape() const {
     return selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size();
 }
-void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event)
-{
+
+void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event) {
     if (!event) return;
     dragMode = DRAG_NONE;
     dragCorner = -1;
 }
 
-void DragDropImageLabel::setShapePosition(int x, int y)
-{
+void DragDropImageLabel::setShapePosition(int x, int y) {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         shapes[selectedShapeIndex].x = qBound(0, x, 1920);
         shapes[selectedShapeIndex].y = qBound(0, y, 1080);
@@ -693,16 +825,14 @@ void DragDropImageLabel::setShapePosition(int x, int y)
 }
 
 
-qreal DragDropImageLabel::getSelectedShapeSize() const
-{
+qreal DragDropImageLabel::getSelectedShapeSize() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         return shapes[selectedShapeIndex].sizePercent;
     }
     return 0.05; // Default size if no shape selected
 }
 
-void DragDropImageLabel::setShapeSize(qreal size)
-{
+void DragDropImageLabel::setShapeSize(qreal size) {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         shapes[selectedShapeIndex].sizePercent = size;
         update();
@@ -710,8 +840,7 @@ void DragDropImageLabel::setShapeSize(qreal size)
 }
 
 // Methods to manipulate selected shape
-void DragDropImageLabel::deleteSelectedShape()
-{
+void DragDropImageLabel::deleteSelectedShape() {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         shapes.removeAt(selectedShapeIndex);
         selectedShapeIndex = -1; // Deselect after deletion
@@ -719,16 +848,14 @@ void DragDropImageLabel::deleteSelectedShape()
     }
 }
 
-void DragDropImageLabel::setShapeColor(const QColor &color)
-{
+void DragDropImageLabel::setShapeColor(const QColor &color) {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         shapes[selectedShapeIndex].color = color;
         update();
     }
 }
 
-void DragDropImageLabel::setBorderWidth(int width)
-{
+void DragDropImageLabel::setBorderWidth(int width) {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         shapes[selectedShapeIndex].borderWidth = width;
         update();
@@ -736,154 +863,177 @@ void DragDropImageLabel::setBorderWidth(int width)
 }
 
 // Implementation in mainwindow.cpp
-QColor DragDropImageLabel::getSelectedShapeColor() const
-{
+QColor DragDropImageLabel::getSelectedShapeColor() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         return shapes[selectedShapeIndex].color;
     }
     return Qt::black; // Default color if no shape selected
 }
 
-int DragDropImageLabel::getSelectedShapeBorderWidth() const
-{
+int DragDropImageLabel::getSelectedShapeBorderWidth() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         return shapes[selectedShapeIndex].borderWidth;
     }
     return 2; // Default width if no shape selected
 }
 
-void DragDropImageLabel::setShapeLayer(int layer)
-{
+void DragDropImageLabel::setShapeLayer(int layer) {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         shapes[selectedShapeIndex].layer = qBound(0, layer, 9);
         update();
     }
 }
 
-int DragDropImageLabel::getSelectedShapeLayer() const
-{
+int DragDropImageLabel::getSelectedShapeLayer() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         return shapes[selectedShapeIndex].layer;
     }
     return 5; // Default layer if no shape selected
 }
-QSet<int> DragDropImageLabel::getVisibleLayers() const
-{
+
+QSet<int> DragDropImageLabel::getVisibleLayers() const {
     return visibleLayers;
 }
-void DragDropImageLabel::setVisibleLayers(const QSet<int>& layers)
-{
+
+void DragDropImageLabel::setVisibleLayers(const QSet<int> &layers) {
     visibleLayers = layers;
-    update();  // Redraw with the new visibility settings
+    update(); // Redraw with the new visibility settings
 }
 
-QString DragDropImageLabel::getSelectedShapeType() const
-{
+QString DragDropImageLabel::getSelectedShapeType() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
         return shapes[selectedShapeIndex].type;
     }
     return QString(); // Return empty string if no shape is selected
 }
 
-int DragDropImageLabel::getSelectedShapeEndX() const
-{
+int DragDropImageLabel::getSelectedShapeEndX() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "矩形") {
         return shapes[selectedShapeIndex].specific.rect.endX;
-        }
+    }
     return 0; // Default value if no rectangle is selected
 }
 
-int DragDropImageLabel::getSelectedShapeEndY() const
-{
+int DragDropImageLabel::getSelectedShapeEndY() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "矩形") {
         return shapes[selectedShapeIndex].specific.rect.endY;
-        }
+    }
     return 0; // Default value if no rectangle is selected
 }
 
-int DragDropImageLabel::getSelectedShapeRadius() const
-{
+int DragDropImageLabel::getSelectedShapeRadius() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "圆形") {
         return shapes[selectedShapeIndex].specific.circle.radius;
-        }
+    }
     return 50; // Default radius if no circle is selected
 }
 
-void DragDropImageLabel::setRectangleEndPoint(int x, int y)
-{
+void DragDropImageLabel::setRectangleEndPoint(int x, int y) {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "矩形") {
         shapes[selectedShapeIndex].specific.rect.endX = qBound(0, x, 1920);
         shapes[selectedShapeIndex].specific.rect.endY = qBound(0, y, 1080);
         update();
-        }
+    }
 }
 
-void DragDropImageLabel::setCircleRadius(int radius)
-{
+void DragDropImageLabel::setCircleRadius(int radius) {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "圆形") {
         shapes[selectedShapeIndex].specific.circle.radius = qBound(1, radius, 500);
         update();
-        }
+    }
 }
 
-void DragDropImageLabel::setLineEndPoint(int x, int y)
-{
+void DragDropImageLabel::setLineEndPoint(int x, int y) {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "直线") {
         shapes[selectedShapeIndex].specific.line.endX = x;
         shapes[selectedShapeIndex].specific.line.endY = y;
         update();
-        }
+    }
 }
 
-void DragDropImageLabel::setEllipseRadius(int radiusX, int radiusY)
-{
+void DragDropImageLabel::setEllipseRadius(int radiusX, int radiusY) {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "椭圆") {
         shapes[selectedShapeIndex].specific.ellipse.radiusX = qBound(1, radiusX, 500);
         shapes[selectedShapeIndex].specific.ellipse.radiusY = qBound(1, radiusY, 500);
         update();
-        }
+    }
 }
 
-int DragDropImageLabel::getSelectedShapeRadiusX() const
-{
+int DragDropImageLabel::getSelectedShapeRadiusX() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "椭圆") {
         return shapes[selectedShapeIndex].specific.ellipse.radiusX;
-        }
+    }
     return 50; // Default X radius if no ellipse is selected
 }
 
-int DragDropImageLabel::getSelectedShapeRadiusY() const
-{
+int DragDropImageLabel::getSelectedShapeRadiusY() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "椭圆") {
         return shapes[selectedShapeIndex].specific.ellipse.radiusY;
-        }
+    }
     return 30; // Default Y radius if no ellipse is selected
 }
 
+void DragDropImageLabel::setArcProperties(int radiusX, int radiusY, int startAngle, int spanAngle) {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "圆弧") {
+        shapes[selectedShapeIndex].specific.arc.radiusX = qBound(1, radiusX, 500);
+        shapes[selectedShapeIndex].specific.arc.radiusY = qBound(1, radiusY, 500);
+        shapes[selectedShapeIndex].specific.arc.startAngle = qBound(0, startAngle, 359);
+        shapes[selectedShapeIndex].specific.arc.spanAngle = qBound(-359, spanAngle, 359);
+        update();
+    }
+}
 
+int DragDropImageLabel::getSelectedShapeArcRadiusX() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "圆弧") {
+        return shapes[selectedShapeIndex].specific.arc.radiusX;
+    }
+    return 50;
+}
+
+int DragDropImageLabel::getSelectedShapeArcRadiusY() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "圆弧") {
+        return shapes[selectedShapeIndex].specific.arc.radiusY;
+    }
+    return 30;
+}
+
+int DragDropImageLabel::getSelectedShapeArcStartAngle() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "圆弧") {
+        return shapes[selectedShapeIndex].specific.arc.startAngle;
+    }
+    return 0;
+}
+
+int DragDropImageLabel::getSelectedShapeArcSpanAngle() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "圆弧") {
+        return shapes[selectedShapeIndex].specific.arc.spanAngle;
+    }
+    return 90;
+}
 
 // ShapeListItem 实现
 ShapeListItem::ShapeListItem(const QString &text, QListWidget *parent)
-    : QListWidgetItem(text, parent)
-{
+    : QListWidgetItem(text, parent) {
     setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDragEnabled);
 }
 
 
-
-
-void MainWindow::onShapeSelectionChanged()
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::onShapeSelectionChanged() {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (!imageLabel || !imageLabel->hasSelectedShape())
         return;
 
@@ -904,8 +1054,7 @@ void MainWindow::onShapeSelectionChanged()
 
         // Show rectangle properties panel
         shapeSpecificControls->setCurrentWidget(rectanglePropertiesWidget);
-    }
-    else if (shapeType == "圆形") {
+    } else if (shapeType == "圆形") {
         // Set up circle-specific controls
         circleRadiusSpinBox->blockSignals(true);
         circleRadiusSpinBox->setValue(imageLabel->getSelectedShapeRadius());
@@ -916,9 +1065,8 @@ void MainWindow::onShapeSelectionChanged()
     }
 }
 
-void MainWindow::changeRectangleEndPoint(int)
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::changeRectangleEndPoint(int) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape() &&
         imageLabel->getSelectedShapeType() == "矩形") {
         imageLabel->setRectangleEndPoint(
@@ -928,39 +1076,48 @@ void MainWindow::changeRectangleEndPoint(int)
     }
 }
 
-void MainWindow::changeCircleRadius(int radius)
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::changeCircleRadius(int radius) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape() &&
         imageLabel->getSelectedShapeType() == "圆形") {
         imageLabel->setCircleRadius(radius);
     }
 }
 
-void MainWindow::changeLineEndPoint(int)
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::changeLineEndPoint(int) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape() &&
         imageLabel->getSelectedShapeType() == "直线") {
         imageLabel->setLineEndPoint(lineEndXSpinBox->value(), lineEndYSpinBox->value());
-        }
+    }
 }
 
-void MainWindow::changeEllipseRadius(int)
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::changeEllipseRadius(int) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape() &&
         imageLabel->getSelectedShapeType() == "椭圆") {
         imageLabel->setEllipseRadius(
             ellipseRadiusXSpinBox->value(),
             ellipseRadiusYSpinBox->value()
         );
-        }
+    }
+}
+
+void MainWindow::changeArcProperties(int) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
+    if (imageLabel && imageLabel->hasSelectedShape() &&
+        imageLabel->getSelectedShapeType() == "圆弧") {
+        imageLabel->setArcProperties(
+            arcRadiusXSpinBox->value(),
+            arcRadiusYSpinBox->value(),
+            arcStartAngleSpinBox->value(),
+            arcSpanAngleSpinBox->value()
+        );
+    }
 }
 
 
-void ShapeListWidget::startDrag(Qt::DropActions supportedActions)
-{
+void ShapeListWidget::startDrag(Qt::DropActions supportedActions) {
     QListWidgetItem *item = currentItem();
     if (item) {
         QMimeData *mimeData = new QMimeData;
@@ -972,16 +1129,15 @@ void ShapeListWidget::startDrag(Qt::DropActions supportedActions)
         // Create a pixmap of the item for the drag cursor
         QPixmap pixmap = item->icon().pixmap(32, 32);
         drag->setPixmap(pixmap);
-        drag->setHotSpot(QPoint(pixmap.width()/2, pixmap.height()/2));
+        drag->setHotSpot(QPoint(pixmap.width() / 2, pixmap.height() / 2));
 
         drag->exec(supportedActions, Qt::CopyAction);
     }
 }
 
 // This overrides the updatePropertyControls method to include shape-specific properties
-void MainWindow::updatePropertyControls()
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::updatePropertyControls() {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (!imageLabel || !imageLabel->hasSelectedShape()) {
         // Disable all controls if no shape is selected
         widthSpinBox->setEnabled(false);
@@ -1033,8 +1189,7 @@ void MainWindow::updatePropertyControls()
 
         // Show rectangle properties panel
         shapeSpecificControls->setCurrentWidget(rectanglePropertiesWidget);
-    }
-    else if (shapeType == "圆形") {
+    } else if (shapeType == "圆形") {
         // Set up circle-specific controls
         circleRadiusSpinBox->blockSignals(true);
         circleRadiusSpinBox->setValue(imageLabel->getSelectedShapeRadius());
@@ -1042,8 +1197,7 @@ void MainWindow::updatePropertyControls()
 
         // Show circle properties panel
         shapeSpecificControls->setCurrentWidget(circlePropertiesWidget);
-    }
-    else if (shapeType == "直线") {
+    } else if (shapeType == "直线") {
         // Set up line-specific controls
         lineEndXSpinBox->blockSignals(true);
         lineEndYSpinBox->blockSignals(true);
@@ -1056,8 +1210,7 @@ void MainWindow::updatePropertyControls()
 
         // Show line properties panel
         shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
-    }
-    else if (shapeType == "椭圆") {
+    } else if (shapeType == "椭圆") {
         // Set up ellipse-specific controls
         ellipseRadiusXSpinBox->blockSignals(true);
         ellipseRadiusYSpinBox->blockSignals(true);
@@ -1070,11 +1223,30 @@ void MainWindow::updatePropertyControls()
 
         // Show ellipse properties panel
         shapeSpecificControls->setCurrentWidget(ellipsePropertiesWidget);
+    } else if (shapeType == "圆弧") {
+        // Set up arc-specific controls
+        arcRadiusXSpinBox->blockSignals(true);
+        arcRadiusYSpinBox->blockSignals(true);
+        arcStartAngleSpinBox->blockSignals(true);
+        arcSpanAngleSpinBox->blockSignals(true);
+
+        arcRadiusXSpinBox->setValue(imageLabel->getSelectedShapeArcRadiusX());
+        arcRadiusYSpinBox->setValue(imageLabel->getSelectedShapeArcRadiusY());
+        arcStartAngleSpinBox->setValue(imageLabel->getSelectedShapeArcStartAngle());
+        arcSpanAngleSpinBox->setValue(imageLabel->getSelectedShapeArcSpanAngle());
+
+        arcRadiusXSpinBox->blockSignals(false);
+        arcRadiusYSpinBox->blockSignals(false);
+        arcStartAngleSpinBox->blockSignals(false);
+        arcSpanAngleSpinBox->blockSignals(false);
+
+        // Show arc properties panel
+        shapeSpecificControls->setCurrentWidget(arcPropertiesWidget);
     }
 }
+
 // Modified version of createShapeToolbar to include shape-specific property controls
-void MainWindow::createShapeToolbar()
-{
+void MainWindow::createShapeToolbar() {
     // Create the shapes dock widget and list (your existing code)
     shapesDock = new QDockWidget(tr("形状工具"), this);
     shapesDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
@@ -1101,6 +1273,10 @@ void MainWindow::createShapeToolbar()
     auto *ellipseItem = new ShapeListItem(tr("椭圆"), shapesListWidget);
     ellipseItem->setIcon(QIcon(createShapeIcon("椭圆")));
 
+    // Add this to your createShapeToolbar() method
+    auto *arcItem = new ShapeListItem(tr("圆弧"), shapesListWidget);
+    arcItem->setIcon(QIcon(createShapeIcon("圆弧")));
+
     shapesDock->setWidget(shapesListWidget);
     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
 
@@ -1125,7 +1301,6 @@ void MainWindow::createShapeToolbar()
     propertiesToolbar->addWidget(widthSpinBox);
     connect(widthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &MainWindow::changeBorderWidth);
-
 
 
     propertiesToolbar->addSeparator();
@@ -1263,7 +1438,50 @@ void MainWindow::createShapeToolbar()
     ellipseLayout->addStretch();
 
 
+    // Arc properties widget
+    arcPropertiesWidget = new QWidget();
+    QVBoxLayout *arcLayout = new QVBoxLayout(arcPropertiesWidget);
 
+    QLabel *arcRadiusXLabel = new QLabel(tr("X轴半径:"));
+    arcRadiusXSpinBox = new QSpinBox();
+    arcRadiusXSpinBox->setRange(1, 500);
+    arcRadiusXSpinBox->setSingleStep(1);
+    connect(arcRadiusXSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeArcProperties);
+
+    QLabel *arcRadiusYLabel = new QLabel(tr("Y轴半径:"));
+    arcRadiusYSpinBox = new QSpinBox();
+    arcRadiusYSpinBox->setRange(1, 500);
+    arcRadiusYSpinBox->setSingleStep(1);
+    connect(arcRadiusYSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeArcProperties);
+
+    QLabel *arcStartAngleLabel = new QLabel(tr("起始角度(°):"));
+    arcStartAngleSpinBox = new QSpinBox();
+    arcStartAngleSpinBox->setRange(0, 359);
+    arcStartAngleSpinBox->setSingleStep(5);
+    connect(arcStartAngleSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeArcProperties);
+
+    QLabel *arcSpanAngleLabel = new QLabel(tr("扫过角度(°):"));
+    arcSpanAngleSpinBox = new QSpinBox();
+    arcSpanAngleSpinBox->setRange(-359, 359);
+    arcSpanAngleSpinBox->setSingleStep(5);
+    connect(arcSpanAngleSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeArcProperties);
+
+    arcLayout->addWidget(arcRadiusXLabel);
+    arcLayout->addWidget(arcRadiusXSpinBox);
+    arcLayout->addWidget(arcRadiusYLabel);
+    arcLayout->addWidget(arcRadiusYSpinBox);
+    arcLayout->addWidget(arcStartAngleLabel);
+    arcLayout->addWidget(arcStartAngleSpinBox);
+    arcLayout->addWidget(arcSpanAngleLabel);
+    arcLayout->addWidget(arcSpanAngleSpinBox);
+    arcLayout->addStretch();
+
+
+    shapeSpecificControls->addWidget(arcPropertiesWidget);
     shapeSpecificControls->addWidget(ellipsePropertiesWidget);
     shapeSpecificControls->addWidget(linePropertiesWidget);
     shapeSpecificControls->addWidget(rectanglePropertiesWidget);
@@ -1274,8 +1492,8 @@ void MainWindow::createShapeToolbar()
     addDockWidget(Qt::RightDockWidgetArea, specificPropDock);
 
     // Connect selection changes to update property controls
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
-    auto *imgLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
+    auto *imgLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imgLabel) {
         connect(imgLabel, &DragDropImageLabel::selectionChanged,
                 this, &MainWindow::updatePropertyControls);
@@ -1290,15 +1508,9 @@ void MainWindow::createShapeToolbar()
 }
 
 
-
-
-
-
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-{
+      , ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
     // Create central image display area
@@ -1316,15 +1528,13 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle(tr("图形编辑器"));
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     delete ui;
 }
 
-void MainWindow::on_actionOpen_triggered()
-{
+void MainWindow::on_actionOpen_triggered() {
     QString fileName = QFileDialog::getOpenFileName(this, tr("打开图片"),
-                                                  "", tr("图片文件 (*.png *.jpg *.bmp)"));
+                                                    "", tr("图片文件 (*.png *.jpg *.bmp)"));
     if (fileName.isEmpty())
         return;
 
@@ -1334,11 +1544,11 @@ void MainWindow::on_actionOpen_triggered()
 
     if (newImage.isNull()) {
         QMessageBox::information(this, tr("无法加载图片"),
-                                tr("无法加载图片：%1").arg(reader.errorString()));
+                                 tr("无法加载图片：%1").arg(reader.errorString()));
         return;
     }
 
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel) {
         imageLabel->setOriginalPixmap(newImage);
     }
@@ -1346,8 +1556,7 @@ void MainWindow::on_actionOpen_triggered()
 
 
 // 创建形状图标的辅助函数
-QPixmap MainWindow::createShapeIcon(const QString &shape)
-{
+QPixmap MainWindow::createShapeIcon(const QString &shape) {
     QPixmap pixmap(40, 40);
     pixmap.fill(Qt::transparent);
 
@@ -1366,17 +1575,20 @@ QPixmap MainWindow::createShapeIcon(const QString &shape)
     } else if (shape == "椭圆") {
         painter.setPen(QPen(Qt::magenta, 2));
         painter.drawEllipse(5, 10, 30, 20); // Draw wider than tall for ellipse icon
+    } else if (shape == "圆弧") {
+        painter.setPen(QPen(Qt::cyan, 2));
+        painter.drawArc(5, 5, 30, 30, 30 * 16, 120 * 16); // Draw a 120° arc starting at 30°
     }
 
     return pixmap;
 }
-void MainWindow::onLayerVisibilityChanged(int layer)
-{
+
+void MainWindow::onLayerVisibilityChanged(int layer) {
     // This method is called when a layer visibility checkbox is toggled
-    QCheckBox* checkbox = qobject_cast<QCheckBox*>(sender());
+    QCheckBox *checkbox = qobject_cast<QCheckBox *>(sender());
     if (!checkbox) return;
 
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (!imageLabel) return;
 
     // Get current visible layers
@@ -1393,18 +1605,19 @@ void MainWindow::onLayerVisibilityChanged(int layer)
     // Update the visible layers in the image label
     imageLabel->setVisibleLayers(visibleLayers);
 }
-void MainWindow::createLayerPanel()
-{
+
+void MainWindow::createLayerPanel() {
     layersDock = new QDockWidget(tr("图层"), this);
     layersDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     layersDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
 
-    QWidget* layersWidget = new QWidget(layersDock);
-    QVBoxLayout* layout = new QVBoxLayout(layersWidget);
+    QWidget *layersWidget = new QWidget(layersDock);
+    QVBoxLayout *layout = new QVBoxLayout(layersWidget);
 
     // Create checkboxes for each layer
-    for (int i = 9; i >= 0; i--) {  // 9 is top layer, 0 is bottom
-        QCheckBox* layerCheckbox = new QCheckBox(tr("图层 %1").arg(i));
+    for (int i = 9; i >= 0; i--) {
+        // 9 is top layer, 0 is bottom
+        QCheckBox *layerCheckbox = new QCheckBox(tr("图层 %1").arg(i));
         layerCheckbox->setChecked(true); // Initially all layers are visible
 
         // Use a lambda to capture the layer index
@@ -1420,9 +1633,8 @@ void MainWindow::createLayerPanel()
 }
 
 
-void MainWindow::changeShapeColor()
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::changeShapeColor() {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (!imageLabel || !imageLabel->hasSelectedShape())
         return;
 
@@ -1434,18 +1646,16 @@ void MainWindow::changeShapeColor()
     }
 }
 
-void MainWindow::deleteSelectedShape()
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::deleteSelectedShape() {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape()) {
         imageLabel->deleteSelectedShape();
         updatePropertyControls(); // Update UI after deletion
     }
 }
 
-void MainWindow::changeBorderWidth(int width)
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::changeBorderWidth(int width) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape()) {
         imageLabel->setBorderWidth(width);
     }
@@ -1459,17 +1669,15 @@ void MainWindow::changeBorderWidth(int width)
 //     }
 // }
 
-void MainWindow::changeShapePosition(int)
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::changeShapePosition(int) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape()) {
         imageLabel->setShapePosition(xPosSpinBox->value(), yPosSpinBox->value());
     }
 }
 
-void MainWindow::changeShapeLayer(int layer)
-{
-    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+void MainWindow::changeShapeLayer(int layer) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape()) {
         imageLabel->setShapeLayer(layer);
     }
