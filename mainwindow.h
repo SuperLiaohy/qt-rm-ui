@@ -78,6 +78,10 @@ public:
     int getSelectedShapeArcRadiusY() const;
     int getSelectedShapeArcStartAngle() const;
     int getSelectedShapeArcSpanAngle() const;
+    int32_t getSelectedShapeIntValue() const;
+    int getSelectedShapeIntFontSize() const;
+    void setIntValue(int32_t value);
+    void setIntFontSize(int fontSize);
 
     // Get shape type
     QString getSelectedShapeType() const;
@@ -135,6 +139,11 @@ private:
                 int startAngle; // Start angle in degrees (0° is 12 o'clock, clockwise)
                 int spanAngle;  // Span angle in degrees
             } arc;
+
+            struct {
+                int32_t value;    // The int32_t value to display
+                int fontSize;     // Font size for displaying the value
+            } intValue;
         } specific;
     };
 
@@ -186,6 +195,7 @@ private slots:
     void changeLineEndPoint(int);
     void changeEllipseRadius(int);
     void changeArcProperties(int);
+    void changeIntProperties(int);
 
 private:
     Ui::MainWindow *ui;
@@ -233,6 +243,12 @@ private:
     QSpinBox *arcRadiusYSpinBox;
     QSpinBox *arcStartAngleSpinBox;
     QSpinBox *arcSpanAngleSpinBox;
+
+    // Int-specific controls
+    QWidget *intValuePropertiesWidget;
+    QSpinBox *intValueSpinBox;
+    QSpinBox *intFontSizeSpinBox;
+
 
     // Helper methods
     void createShapeToolbar();

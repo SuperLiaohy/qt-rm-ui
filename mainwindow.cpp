@@ -162,6 +162,10 @@ void DragDropImageLabel::dropEvent(QDropEvent *event) {
         shape.specific.arc.radiusY = 30; // Default Y radius
         shape.specific.arc.startAngle = 0; // Start at 12 o'clock
         shape.specific.arc.spanAngle = 180; // Default 90° arc (quarter circle)
+    } else if (shape.type == "整数") {
+        shape.color = Qt::black;
+        shape.specific.intValue.value = 0; // Default value
+        shape.specific.intValue.fontSize = 16; // Default font size
     }
 
     shapes.append(shape);
@@ -359,6 +363,20 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event) {
             int qtStartAngle = (90 - shape.specific.arc.startAngle) * 16;
             int qtSpanAngle = -shape.specific.arc.spanAngle * 16; // Negative for clockwise
             painter.drawArc(arcRect, qtStartAngle, qtSpanAngle);
+        } else if (shape.type == "整数") {
+            // Calculate scaled position
+            double relX = (double) shape.x / 1920 * originalPixmap.width();
+            double relY = (double) shape.y / 1080 * originalPixmap.height();
+            int imgX = x + relX * scaleX;
+            int imgY = y + relY * scaleY;
+
+            // Set font size and family
+            QFont font("Arial", shape.specific.intValue.fontSize);
+            painter.setFont(font);
+
+            // Draw the integer value as text
+            QString text = QString::number(shape.specific.intValue.value);
+            painter.drawText(imgX, imgY, text);
         }
     }
 }
@@ -369,331 +387,367 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event) {
         return;
 
     int oldSelection = selectedShapeIndex;
-    selectedShapeIndex = -1; // Reset selection first
-    dragMode = DRAG_NONE;
+    bool clickedOnShape = false; // Declare the variable here
 
     QSize scaledSize = originalPixmap.size();
     scaledSize.scale(width(), height(), Qt::KeepAspectRatio);
     int x = (width() - scaledSize.width()) / 2;
     int y = (height() - scaledSize.height()) / 2;
 
-    // Check if click is outside image area
+    // Check if click is within image area
     QRect imageRect(x, y, scaledSize.width(), scaledSize.height());
-    if (!imageRect.contains(event->pos())) {
-        if (oldSelection != selectedShapeIndex) {
-            emit selectionChanged();
-        }
-        return;
-    }
 
-    double scaleX = (double) scaledSize.width() / originalPixmap.width();
-    double scaleY = (double) scaledSize.height() / originalPixmap.height();
+    // Only process left mouse button events for dragging
+    if (imageRect.contains(event->pos()) && event->button() == Qt::LeftButton) {
+        double scaleX = (double) scaledSize.width() / originalPixmap.width();
+        double scaleY = (double) scaledSize.height() / originalPixmap.height();
 
-    // Check shapes in reverse order (top to bottom) to select the topmost shape first
-    for (int i = shapes.size() - 1; i >= 0; i--) {
-        const auto &shape = shapes[i];
-
-        // Skip shapes on hidden layers
-        if (!visibleLayers.contains(shape.layer)) {
-            continue;
-        }
-
-        if (shape.type == "圆形") {
-            // Convert center point to screen coordinates
-            double relX = (double) shape.x / 1920 * originalPixmap.width();
-            double relY = (double) shape.y / 1080 * originalPixmap.height();
-            int imgX = x + relX * scaleX;
-            int imgY = y + relY * scaleY;
-
-            // Convert radius to screen coordinates
-            double radiusRel = (double) shape.specific.circle.radius / 1920 * originalPixmap.width();
-            int radiusScreen = radiusRel * scaleX;
-
-            // Calculate distance from click to center
-            QPoint center(imgX, imgY);
-            qreal distance = QLineF(center, event->pos()).length();
-
-            // Check if click is within circle border (use a reasonable width for selection)
-            int selectionWidth = qMax(5, shape.borderWidth);
-            if (qAbs(distance - radiusScreen) <= selectionWidth) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_SHAPE;
-
-                // Store the offset between click point and shape center
-                QPoint clickOffset = event->pos() - center;
-
-                // Calculate the offset in original coordinates
-                dragStartPos = QPoint(
-                    clickOffset.x() / scaleX * 1920 / originalPixmap.width(),
-                    clickOffset.y() / scaleY * 1080 / originalPixmap.height()
-                );
-                break;
+        for (int i = shapes.size() - 1; i >= 0; i--) {
+            const auto &shape = shapes[i];
+            if (!visibleLayers.contains(shape.layer)) {
+                continue;
             }
-        } else if (shape.type == "矩形") {
-            // Convert rectangle coordinates to screen coordinates
-            double startRelX = (double) shape.x / 1920 * originalPixmap.width();
-            double startRelY = (double) shape.y / 1080 * originalPixmap.height();
-            double endRelX = (double) shape.specific.rect.endX / 1920 * originalPixmap.width();
-            double endRelY = (double) shape.specific.rect.endY / 1080 * originalPixmap.height();
+            bool isHit = false;
+            if (shape.type == "圆形") {
+                // Convert center point to screen coordinates
+                double relX = (double) shape.x / 1920 * originalPixmap.width();
+                double relY = (double) shape.y / 1080 * originalPixmap.height();
+                int imgX = x + relX * scaleX;
+                int imgY = y + relY * scaleY;
 
-            int imgStartX = x + startRelX * scaleX;
-            int imgStartY = y + startRelY * scaleY;
-            int imgEndX = x + endRelX * scaleX;
-            int imgEndY = y + endRelY * scaleY;
+                // Convert radius to screen coordinates
+                double radiusRel = (double) shape.specific.circle.radius / 1920 * originalPixmap.width();
+                int radiusScreen = radiusRel * scaleX;
 
-            // Create the rectangle corners with hit area
-            QPoint topLeft(qMin(imgStartX, imgEndX), qMin(imgStartY, imgEndY));
-            QPoint topRight(qMax(imgStartX, imgEndX), qMin(imgStartY, imgEndY));
-            QPoint bottomLeft(qMin(imgStartX, imgEndX), qMax(imgStartY, imgEndY));
-            QPoint bottomRight(qMax(imgStartX, imgEndX), qMax(imgStartY, imgEndY));
+                // Calculate distance from click to center
+                QPoint center(imgX, imgY);
+                qreal distance = QLineF(center, event->pos()).length();
 
-            int cornerSize = 10; // Size of corner hit area
+                // Check if click is within circle border (use a reasonable width for selection)
+                int selectionWidth = qMax(5, shape.borderWidth);
+                if (qAbs(distance - radiusScreen) <= selectionWidth) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_SHAPE;
 
-            // Check if click is on a corner
-            if ((event->pos() - topLeft).manhattanLength() <= cornerSize) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_RECTANGLE_CORNER;
-                dragCorner = 0; // Top-left
-                break;
-            } else if ((event->pos() - topRight).manhattanLength() <= cornerSize) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_RECTANGLE_CORNER;
-                dragCorner = 1; // Top-right
-                break;
-            } else if ((event->pos() - bottomLeft).manhattanLength() <= cornerSize) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_RECTANGLE_CORNER;
-                dragCorner = 2; // Bottom-left
-                break;
-            } else if ((event->pos() - bottomRight).manhattanLength() <= cornerSize) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_RECTANGLE_CORNER;
-                dragCorner = 3; // Bottom-right
-                break;
-            }
+                    // Store the offset between click point and shape center
+                    QPoint clickOffset = event->pos() - center;
 
-            // Create the rectangle
-            QRect rectOuter(topLeft, bottomRight);
-
-            // Create inner rectangle for border detection
-            int borderWidth = qMax(5, shape.borderWidth);
-            QRect rectInner = rectOuter.adjusted(borderWidth, borderWidth, -borderWidth, -borderWidth);
-
-            // Check if click is within rectangle border
-            if (rectOuter.contains(event->pos()) && !rectInner.contains(event->pos())) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_SHAPE;
-
-                // Store exact click point relative to shape (important for precise dragging)
-                // We need the click offset from the shape's reference point (x,y)
-                QPoint shapeTopLeft(imgStartX, imgStartY);
-                QPoint clickOffset = event->pos() - shapeTopLeft;
-
-                // Calculate the offset in original coordinates
-                dragStartPos = QPoint(
-                    clickOffset.x() / scaleX * 1920 / originalPixmap.width(),
-                    clickOffset.y() / scaleY * 1080 / originalPixmap.height()
-                );
-                break;
-            }
-        } else if (shape.type == "直线") {
-            // Convert line coordinates to screen coordinates
-            double startRelX = (double) shape.x / 1920 * originalPixmap.width();
-            double startRelY = (double) shape.y / 1080 * originalPixmap.height();
-            double endRelX = (double) shape.specific.line.endX / 1920 * originalPixmap.width();
-            double endRelY = (double) shape.specific.line.endY / 1080 * originalPixmap.height();
-
-            int imgStartX = x + startRelX * scaleX;
-            int imgStartY = y + startRelY * scaleY;
-            int imgEndX = x + endRelX * scaleX;
-            int imgEndY = y + endRelY * scaleY;
-
-            // Create hit points for start and end points
-            QPoint startPoint(imgStartX, imgStartY);
-            QPoint endPoint(imgEndX, imgEndY);
-
-            int cornerSize = 10; // Size of endpoint hit area
-
-            // Check if click is on a line endpoint
-            if ((event->pos() - startPoint).manhattanLength() <= cornerSize) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_RECTANGLE_CORNER;
-                dragCorner = 0; // Start point
-                break;
-            } else if ((event->pos() - endPoint).manhattanLength() <= cornerSize) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_RECTANGLE_CORNER;
-                dragCorner = 1; // End point
-                break;
-            }
-
-            // Calculate distance from click to line
-            QLineF line(startPoint, endPoint);
-            QPointF clickPos(event->pos());
-
-            // Project point onto line to find perpendicular distance
-            QLineF normal = line.normalVector();
-            normal.translate(clickPos - line.p1());
-            QPointF intersection;
-            line.intersects(normal, &intersection);
-
-            qreal distance = QLineF(clickPos, intersection).length();
-
-            // Check if click is close enough to line
-            int selectionWidth = qMax(5, shape.borderWidth);
-            if (distance <= selectionWidth &&
-                QLineF(line.p1(), intersection).length() <= line.length() &&
-                QLineF(line.p2(), intersection).length() <= line.length()) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_SHAPE;
-
-                // Store exact click point relative to shape
-                QPoint clickOffset = event->pos() - startPoint;
-
-                // Calculate the offset in original coordinates
-                dragStartPos = QPoint(
-                    clickOffset.x() / scaleX * 1920 / originalPixmap.width(),
-                    clickOffset.y() / scaleY * 1080 / originalPixmap.height()
-                );
-                break;
-            }
-        } else if (shape.type == "椭圆") {
-            // Convert center point to screen coordinates
-            double relX = (double) shape.x / 1920 * originalPixmap.width();
-            double relY = (double) shape.y / 1080 * originalPixmap.height();
-            int imgX = x + relX * scaleX;
-            int imgY = y + relY * scaleY;
-
-            // Convert radii to screen coordinates
-            double radiusXRel = (double) shape.specific.ellipse.radiusX / 1920 * originalPixmap.width();
-            double radiusYRel = (double) shape.specific.ellipse.radiusY / 1080 * originalPixmap.height();
-            int radiusXScreen = radiusXRel * scaleX;
-            int radiusYScreen = radiusYRel * scaleY;
-
-            // Calculate position relative to ellipse center
-            int relClickX = event->pos().x() - imgX;
-            int relClickY = event->pos().y() - imgY;
-
-            // Calculate the normalized distance from click to ellipse boundary
-            double normalizedDistSquared =
-                    pow(relClickX / (double) radiusXScreen, 2) +
-                    pow(relClickY / (double) radiusYScreen, 2);
-            double normalizedDist = sqrt(normalizedDistSquared);
-
-            // Selection tolerance - set a minimum pixel width of 5 or the border width
-            double pixelTolerance = qMax(5.0, (double) shape.borderWidth);
-            double toleranceNormalized = pixelTolerance / qMin(radiusXScreen, radiusYScreen);
-
-            // Check if click is near the ellipse boundary
-            bool nearEllipse = (fabs(normalizedDist - 1.0) <= toleranceNormalized);
-
-            // Debug output
-            // qDebug() << "Ellipse click: normalizedDist=" << normalizedDist
-            //          << " tolerance=" << toleranceNormalized
-            //          << " nearEllipse=" << nearEllipse;
-
-            // Make ellipse selectable by the entire boundary
-            if (nearEllipse) {
-                selectedShapeIndex = i;
-                dragMode = DRAG_SHAPE;
-
-                // Store click position relative to center for dragging
-                dragStartPos = QPoint(
-                    relClickX / scaleX * 1920 / originalPixmap.width(),
-                    relClickY / scaleY * 1080 / originalPixmap.height()
-                );
-
-                emit selectionChanged();
-                update();
-                break;
-            }
-        } else if (shape.type == "圆弧") {
-            // Convert center point to screen coordinates
-            double relX = (double) shape.x / 1920 * originalPixmap.width();
-            double relY = (double) shape.y / 1080 * originalPixmap.height();
-            int imgX = x + relX * scaleX;
-            int imgY = y + relY * scaleY;
-
-            // Convert radii to screen coordinates
-            double radiusXRel = (double) shape.specific.arc.radiusX / 1920 * originalPixmap.width();
-            double radiusYRel = (double) shape.specific.arc.radiusY / 1080 * originalPixmap.height();
-            int radiusXScreen = radiusXRel * scaleX;
-            int radiusYScreen = radiusYRel * scaleY;
-
-            // Calculate position relative to arc center
-            int relClickX = event->pos().x() - imgX;
-            int relClickY = event->pos().y() - imgY;
-
-            // Calculate the normalized distance from click to ellipse boundary
-            double normalizedDistSquared =
-                    pow(relClickX / (double) radiusXScreen, 2) +
-                    pow(relClickY / (double) radiusYScreen, 2);
-            double normalizedDist = sqrt(normalizedDistSquared);
-
-            // Calculate angle in degrees (0-360, 0° at 12 o'clock)
-            double angle = atan2(relClickY, relClickX) * 180.0 / M_PI;
-            // Convert from atan2 (where 0° is at 3 o'clock) to 12 o'clock system
-            double angleDeg = 90 - angle;
-            if (angleDeg < 0) angleDeg += 360.0;
-
-            // Get arc parameters
-            int startAngle = shape.specific.arc.startAngle;
-            int spanAngle = shape.specific.arc.spanAngle;
-            int endAngle = (startAngle + spanAngle) % 360;
-            if (endAngle < 0) endAngle += 360;
-
-            // Selection tolerance - set a minimum pixel width of 5 or the border width
-            double pixelTolerance = qMax(5.0, (double) shape.borderWidth);
-            double toleranceNormalized = pixelTolerance / qMin(radiusXScreen, radiusYScreen);
-
-            // Check if click is near the arc path
-            bool nearArc = (fabs(normalizedDist - 1.0) <= toleranceNormalized);
-
-            // For debugging only
-            bool inAngleRange = false;
-
-            if (spanAngle > 0) {
-                // Clockwise arc
-                if (startAngle <= endAngle) {
-                    inAngleRange = (angleDeg >= startAngle && angleDeg <= endAngle);
-                } else {
-                    inAngleRange = (angleDeg >= startAngle || angleDeg <= endAngle);
+                    // Calculate the offset in original coordinates
+                    dragStartPos = QPoint(
+                        clickOffset.x() / scaleX * 1920 / originalPixmap.width(),
+                        clickOffset.y() / scaleY * 1080 / originalPixmap.height()
+                    );
+                    break;
                 }
-            } else {
-                // Handle counter-clockwise case
-                if (endAngle <= startAngle) {
-                    inAngleRange = (angleDeg <= startAngle && angleDeg >= endAngle);
+            } else if (shape.type == "矩形") {
+                // Convert rectangle coordinates to screen coordinates
+                double startRelX = (double) shape.x / 1920 * originalPixmap.width();
+                double startRelY = (double) shape.y / 1080 * originalPixmap.height();
+                double endRelX = (double) shape.specific.rect.endX / 1920 * originalPixmap.width();
+                double endRelY = (double) shape.specific.rect.endY / 1080 * originalPixmap.height();
+
+                int imgStartX = x + startRelX * scaleX;
+                int imgStartY = y + startRelY * scaleY;
+                int imgEndX = x + endRelX * scaleX;
+                int imgEndY = y + endRelY * scaleY;
+
+                // Create the rectangle corners with hit area
+                QPoint topLeft(qMin(imgStartX, imgEndX), qMin(imgStartY, imgEndY));
+                QPoint topRight(qMax(imgStartX, imgEndX), qMin(imgStartY, imgEndY));
+                QPoint bottomLeft(qMin(imgStartX, imgEndX), qMax(imgStartY, imgEndY));
+                QPoint bottomRight(qMax(imgStartX, imgEndX), qMax(imgStartY, imgEndY));
+
+                int cornerSize = 10; // Size of corner hit area
+
+                // Check if click is on a corner
+                if ((event->pos() - topLeft).manhattanLength() <= cornerSize) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_RECTANGLE_CORNER;
+                    dragCorner = 0; // Top-left
+                    break;
+                } else if ((event->pos() - topRight).manhattanLength() <= cornerSize) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_RECTANGLE_CORNER;
+                    dragCorner = 1; // Top-right
+                    break;
+                } else if ((event->pos() - bottomLeft).manhattanLength() <= cornerSize) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_RECTANGLE_CORNER;
+                    dragCorner = 2; // Bottom-left
+                    break;
+                } else if ((event->pos() - bottomRight).manhattanLength() <= cornerSize) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_RECTANGLE_CORNER;
+                    dragCorner = 3; // Bottom-right
+                    break;
+                }
+
+                // Create the rectangle
+                QRect rectOuter(topLeft, bottomRight);
+
+                // Create inner rectangle for border detection
+                int borderWidth = qMax(5, shape.borderWidth);
+                QRect rectInner = rectOuter.adjusted(borderWidth, borderWidth, -borderWidth, -borderWidth);
+
+                // Check if click is within rectangle border
+                if (rectOuter.contains(event->pos()) && !rectInner.contains(event->pos())) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_SHAPE;
+
+                    // Store exact click point relative to shape (important for precise dragging)
+                    // We need the click offset from the shape's reference point (x,y)
+                    QPoint shapeTopLeft(imgStartX, imgStartY);
+                    QPoint clickOffset = event->pos() - shapeTopLeft;
+
+                    // Calculate the offset in original coordinates
+                    dragStartPos = QPoint(
+                        clickOffset.x() / scaleX * 1920 / originalPixmap.width(),
+                        clickOffset.y() / scaleY * 1080 / originalPixmap.height()
+                    );
+                    break;
+                }
+            } else if (shape.type == "直线") {
+                // Convert line coordinates to screen coordinates
+                double startRelX = (double) shape.x / 1920 * originalPixmap.width();
+                double startRelY = (double) shape.y / 1080 * originalPixmap.height();
+                double endRelX = (double) shape.specific.line.endX / 1920 * originalPixmap.width();
+                double endRelY = (double) shape.specific.line.endY / 1080 * originalPixmap.height();
+
+                int imgStartX = x + startRelX * scaleX;
+                int imgStartY = y + startRelY * scaleY;
+                int imgEndX = x + endRelX * scaleX;
+                int imgEndY = y + endRelY * scaleY;
+
+                // Create hit points for start and end points
+                QPoint startPoint(imgStartX, imgStartY);
+                QPoint endPoint(imgEndX, imgEndY);
+
+                int cornerSize = 10; // Size of endpoint hit area
+
+                // Check if click is on a line endpoint
+                if ((event->pos() - startPoint).manhattanLength() <= cornerSize) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_RECTANGLE_CORNER;
+                    dragCorner = 0; // Start point
+                    break;
+                } else if ((event->pos() - endPoint).manhattanLength() <= cornerSize) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_RECTANGLE_CORNER;
+                    dragCorner = 1; // End point
+                    break;
+                }
+
+                // Calculate distance from click to line
+                QLineF line(startPoint, endPoint);
+                QPointF clickPos(event->pos());
+
+                // Project point onto line to find perpendicular distance
+                QLineF normal = line.normalVector();
+                normal.translate(clickPos - line.p1());
+                QPointF intersection;
+                line.intersects(normal, &intersection);
+
+                qreal distance = QLineF(clickPos, intersection).length();
+
+                // Check if click is close enough to line
+                int selectionWidth = qMax(5, shape.borderWidth);
+                if (distance <= selectionWidth &&
+                    QLineF(line.p1(), intersection).length() <= line.length() &&
+                    QLineF(line.p2(), intersection).length() <= line.length()) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_SHAPE;
+
+                    // Store exact click point relative to shape
+                    QPoint clickOffset = event->pos() - startPoint;
+
+                    // Calculate the offset in original coordinates
+                    dragStartPos = QPoint(
+                        clickOffset.x() / scaleX * 1920 / originalPixmap.width(),
+                        clickOffset.y() / scaleY * 1080 / originalPixmap.height()
+                    );
+                    break;
+                }
+            } else if (shape.type == "椭圆") {
+                // Convert center point to screen coordinates
+                double relX = (double) shape.x / 1920 * originalPixmap.width();
+                double relY = (double) shape.y / 1080 * originalPixmap.height();
+                int imgX = x + relX * scaleX;
+                int imgY = y + relY * scaleY;
+
+                // Convert radii to screen coordinates
+                double radiusXRel = (double) shape.specific.ellipse.radiusX / 1920 * originalPixmap.width();
+                double radiusYRel = (double) shape.specific.ellipse.radiusY / 1080 * originalPixmap.height();
+                int radiusXScreen = radiusXRel * scaleX;
+                int radiusYScreen = radiusYRel * scaleY;
+
+                // Calculate position relative to ellipse center
+                int relClickX = event->pos().x() - imgX;
+                int relClickY = event->pos().y() - imgY;
+
+                // Calculate the normalized distance from click to ellipse boundary
+                double normalizedDistSquared =
+                        pow(relClickX / (double) radiusXScreen, 2) +
+                        pow(relClickY / (double) radiusYScreen, 2);
+                double normalizedDist = sqrt(normalizedDistSquared);
+
+                // Selection tolerance - set a minimum pixel width of 5 or the border width
+                double pixelTolerance = qMax(5.0, (double) shape.borderWidth);
+                double toleranceNormalized = pixelTolerance / qMin(radiusXScreen, radiusYScreen);
+
+                // Check if click is near the ellipse boundary
+                bool nearEllipse = (fabs(normalizedDist - 1.0) <= toleranceNormalized);
+
+                // Debug output
+                // qDebug() << "Ellipse click: normalizedDist=" << normalizedDist
+                //          << " tolerance=" << toleranceNormalized
+                //          << " nearEllipse=" << nearEllipse;
+
+                // Make ellipse selectable by the entire boundary
+                if (nearEllipse) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_SHAPE;
+
+                    // Store click position relative to center for dragging
+                    dragStartPos = QPoint(
+                        relClickX / scaleX * 1920 / originalPixmap.width(),
+                        relClickY / scaleY * 1080 / originalPixmap.height()
+                    );
+
+                    emit selectionChanged();
+                    update();
+                    break;
+                }
+            } else if (shape.type == "圆弧") {
+                // Convert center point to screen coordinates
+                double relX = (double) shape.x / 1920 * originalPixmap.width();
+                double relY = (double) shape.y / 1080 * originalPixmap.height();
+                int imgX = x + relX * scaleX;
+                int imgY = y + relY * scaleY;
+
+                // Convert radii to screen coordinates
+                double radiusXRel = (double) shape.specific.arc.radiusX / 1920 * originalPixmap.width();
+                double radiusYRel = (double) shape.specific.arc.radiusY / 1080 * originalPixmap.height();
+                int radiusXScreen = radiusXRel * scaleX;
+                int radiusYScreen = radiusYRel * scaleY;
+
+                // Calculate position relative to arc center
+                int relClickX = event->pos().x() - imgX;
+                int relClickY = event->pos().y() - imgY;
+
+                // Calculate the normalized distance from click to ellipse boundary
+                double normalizedDistSquared =
+                        pow(relClickX / (double) radiusXScreen, 2) +
+                        pow(relClickY / (double) radiusYScreen, 2);
+                double normalizedDist = sqrt(normalizedDistSquared);
+
+                // Calculate angle in degrees (0-360, 0° at 12 o'clock)
+                double angle = atan2(relClickY, relClickX) * 180.0 / M_PI;
+                // Convert from atan2 (where 0° is at 3 o'clock) to 12 o'clock system
+                double angleDeg = 90 - angle;
+                if (angleDeg < 0) angleDeg += 360.0;
+
+                // Get arc parameters
+                int startAngle = shape.specific.arc.startAngle;
+                int spanAngle = shape.specific.arc.spanAngle;
+                int endAngle = (startAngle + spanAngle) % 360;
+                if (endAngle < 0) endAngle += 360;
+
+                // Selection tolerance - set a minimum pixel width of 5 or the border width
+                double pixelTolerance = qMax(5.0, (double) shape.borderWidth);
+                double toleranceNormalized = pixelTolerance / qMin(radiusXScreen, radiusYScreen);
+
+                // Check if click is near the arc path
+                bool nearArc = (fabs(normalizedDist - 1.0) <= toleranceNormalized);
+
+                // For debugging only
+                bool inAngleRange = false;
+
+                if (spanAngle > 0) {
+                    // Clockwise arc
+                    if (startAngle <= endAngle) {
+                        inAngleRange = (angleDeg >= startAngle && angleDeg <= endAngle);
+                    } else {
+                        inAngleRange = (angleDeg >= startAngle || angleDeg <= endAngle);
+                    }
                 } else {
-                    inAngleRange = (angleDeg <= startAngle || angleDeg >= endAngle);
+                    // Handle counter-clockwise case
+                    if (endAngle <= startAngle) {
+                        inAngleRange = (angleDeg <= startAngle && angleDeg >= endAngle);
+                    } else {
+                        inAngleRange = (angleDeg <= startAngle || angleDeg >= endAngle);
+                    }
+                }
+
+                // Debug output
+                // qDebug() << "Arc click: angle=" << angleDeg << " start=" << startAngle
+                //          << " end=" << endAngle
+                //          << " inRange=" << inAngleRange
+                //          << " normalizedDist=" << normalizedDist
+                //          << " tolerance=" << toleranceNormalized
+                //          << " nearArc=" << nearArc;
+
+                // THE FIX IS HERE: Make arc selectable by the entire border, not just in the angle range
+                if (nearArc) {
+                    selectedShapeIndex = i;
+                    dragMode = DRAG_SHAPE;
+
+                    // Store click position relative to center for dragging
+                    dragStartPos = QPoint(
+                        relClickX / scaleX * 1920 / originalPixmap.width(),
+                        relClickY / scaleY * 1080 / originalPixmap.height()
+                    );
+
+                    emit selectionChanged();
+                    update();
+                    break;
+                }
+            } else if (shape.type == "整数") {
+                // Calculate position for testing
+                double relX = (double) shape.x / 1920 * originalPixmap.width();
+                double relY = (double) shape.y / 1080 * originalPixmap.height();
+                int imgX = x + relX * scaleX;
+                int imgY = y + relY * scaleY;
+
+                // Create a hit area around the text
+                QFont font("Arial", shape.specific.intValue.fontSize);
+                QFontMetrics metrics(font);
+                QString text = QString::number(shape.specific.intValue.value);
+                QRect textRect = metrics.boundingRect(text);
+                textRect.moveTo(imgX, imgY - metrics.ascent());
+
+                // Add some padding for easier selection
+                textRect.adjust(-5, -5, 5, 5);
+
+                if (textRect.contains(event->pos())) {
+                    isHit = true;
                 }
             }
 
-            // Debug output
-            // qDebug() << "Arc click: angle=" << angleDeg << " start=" << startAngle
-            //          << " end=" << endAngle
-            //          << " inRange=" << inAngleRange
-            //          << " normalizedDist=" << normalizedDist
-            //          << " tolerance=" << toleranceNormalized
-            //          << " nearArc=" << nearArc;
-
-            // THE FIX IS HERE: Make arc selectable by the entire border, not just in the angle range
-            if (nearArc) {
+            if (isHit) {
                 selectedShapeIndex = i;
                 dragMode = DRAG_SHAPE;
 
-                // Store click position relative to center for dragging
-                dragStartPos = QPoint(
-                    relClickX / scaleX * 1920 / originalPixmap.width(),
-                    relClickY / scaleY * 1080 / originalPixmap.height()
-                );
+                // Store the offset between mouse position and shape position
+                double relX = (double) shape.x / 1920 * originalPixmap.width();
+                double relY = (double) shape.y / 1080 * originalPixmap.height();
+                int imgX = x + relX * scaleX;
+                int imgY = y + relY * scaleY;
 
-                emit selectionChanged();
-                update();
+                // Calculate and store the offset
+                dragStartPos = QPoint(event->pos().x() - imgX, event->pos().y() - imgY);
+
+                clickedOnShape = true;
                 break;
             }
         }
+    } else {
+        // If right button or outside image, just update selection state
+        // But don't start drag operation
+        if (event->button() != Qt::LeftButton) {
+            selectedShapeIndex = -1;
+            dragMode = DRAG_NONE;
+        }
     }
-
     update();
     if (oldSelection != selectedShapeIndex) {
         emit selectionChanged();
@@ -701,7 +755,7 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event) {
 }
 
 void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event) {
-    if (dragMode == DRAG_NONE || selectedShapeIndex < 0 || selectedShapeIndex >= shapes.size())
+    if (dragMode == DRAG_NONE || !(event->buttons() & Qt::LeftButton))
         return;
 
     QSize scaledSize = originalPixmap.size();
@@ -811,9 +865,12 @@ bool DragDropImageLabel::hasSelectedShape() const {
 }
 
 void DragDropImageLabel::mouseReleaseEvent(QMouseEvent *event) {
-    if (!event) return;
-    dragMode = DRAG_NONE;
-    dragCorner = -1;
+    // Only handle release for left button operations
+    if (event->button() == Qt::LeftButton) {
+        dragMode = DRAG_NONE;
+        dragCorner = -1;
+        update();
+    }
 }
 
 void DragDropImageLabel::setShapePosition(int x, int y) {
@@ -1025,6 +1082,38 @@ int DragDropImageLabel::getSelectedShapeArcSpanAngle() const {
     return 90;
 }
 
+int32_t DragDropImageLabel::getSelectedShapeIntValue() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "整数") {
+        return shapes[selectedShapeIndex].specific.intValue.value;
+    }
+    return 0; // Default value if no int shape is selected
+}
+
+int DragDropImageLabel::getSelectedShapeIntFontSize() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "整数") {
+        return shapes[selectedShapeIndex].specific.intValue.fontSize;
+    }
+    return 12; // Default font size if no int shape is selected
+}
+
+void DragDropImageLabel::setIntValue(int32_t value) {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "整数") {
+        shapes[selectedShapeIndex].specific.intValue.value = value;
+        update();
+    }
+}
+
+void DragDropImageLabel::setIntFontSize(int fontSize) {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "整数") {
+        shapes[selectedShapeIndex].specific.intValue.fontSize = qBound(8, fontSize, 72);
+        update();
+    }
+}
+
 // ShapeListItem 实现
 ShapeListItem::ShapeListItem(const QString &text, QListWidget *parent)
     : QListWidgetItem(text, parent) {
@@ -1116,6 +1205,15 @@ void MainWindow::changeArcProperties(int) {
     }
 }
 
+
+void MainWindow::changeIntProperties(int) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
+    if (imageLabel && imageLabel->hasSelectedShape() &&
+        imageLabel->getSelectedShapeType() == "整数") {
+        imageLabel->setIntValue(intValueSpinBox->value());
+        imageLabel->setIntFontSize(intFontSizeSpinBox->value());
+    }
+}
 
 void ShapeListWidget::startDrag(Qt::DropActions supportedActions) {
     QListWidgetItem *item = currentItem();
@@ -1242,6 +1340,17 @@ void MainWindow::updatePropertyControls() {
 
         // Show arc properties panel
         shapeSpecificControls->setCurrentWidget(arcPropertiesWidget);
+    } else if (shapeType == "整数") {
+        shapeSpecificControls->setCurrentWidget(intValuePropertiesWidget);
+
+        intValueSpinBox->blockSignals(true);
+        intFontSizeSpinBox->blockSignals(true);
+
+        intValueSpinBox->setValue(imageLabel->getSelectedShapeIntValue());
+        intFontSizeSpinBox->setValue(imageLabel->getSelectedShapeIntFontSize());
+
+        intValueSpinBox->blockSignals(false);
+        intFontSizeSpinBox->blockSignals(false);
     }
 }
 
@@ -1276,6 +1385,10 @@ void MainWindow::createShapeToolbar() {
     // Add this to your createShapeToolbar() method
     auto *arcItem = new ShapeListItem(tr("圆弧"), shapesListWidget);
     arcItem->setIcon(QIcon(createShapeIcon("圆弧")));
+
+    auto *intValueItem = new ShapeListItem(tr("整数"), shapesListWidget);
+    intValueItem->setIcon(QIcon(createShapeIcon("整数")));
+
 
     shapesDock->setWidget(shapesListWidget);
     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
@@ -1481,6 +1594,32 @@ void MainWindow::createShapeToolbar() {
     arcLayout->addStretch();
 
 
+    // Create int value properties widget
+    intValuePropertiesWidget = new QWidget();
+    QVBoxLayout *intValueLayout = new QVBoxLayout(intValuePropertiesWidget);
+
+    QLabel *intValueLabel = new QLabel(tr("整数值:"));
+    intValueSpinBox = new QSpinBox();
+    intValueSpinBox->setRange(INT_MIN, INT_MAX);
+    intValueSpinBox->setSingleStep(1);
+    connect(intValueSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeIntProperties);
+
+    QLabel *intFontSizeLabel = new QLabel(tr("字体大小:"));
+    intFontSizeSpinBox = new QSpinBox();
+    intFontSizeSpinBox->setRange(8, 72);
+    intFontSizeSpinBox->setSingleStep(1);
+    connect(intFontSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeIntProperties);
+
+    intValueLayout->addWidget(intValueLabel);
+    intValueLayout->addWidget(intValueSpinBox);
+    intValueLayout->addWidget(intFontSizeLabel);
+    intValueLayout->addWidget(intFontSizeSpinBox);
+    intValueLayout->addStretch();
+
+    // Add to your stacked widget:
+    shapeSpecificControls->addWidget(intValuePropertiesWidget);
     shapeSpecificControls->addWidget(arcPropertiesWidget);
     shapeSpecificControls->addWidget(ellipsePropertiesWidget);
     shapeSpecificControls->addWidget(linePropertiesWidget);
@@ -1578,6 +1717,10 @@ QPixmap MainWindow::createShapeIcon(const QString &shape) {
     } else if (shape == "圆弧") {
         painter.setPen(QPen(Qt::cyan, 2));
         painter.drawArc(5, 5, 30, 30, 30 * 16, 120 * 16); // Draw a 120° arc starting at 30°
+    } else if (shape == "整数") {
+        painter.setPen(QPen(Qt::black, 2));
+        painter.setFont(QFont("Arial", 12));
+        painter.drawText(5, 25, "123");
     }
 
     return pixmap;
