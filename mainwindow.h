@@ -70,6 +70,10 @@ public:
     void setRectangleEndPoint(int x, int y);
     void setCircleRadius(int radius);
     void setLineEndPoint(int x, int y);
+    void setEllipseRadius(int radiusX, int radiusY);
+    int getSelectedShapeRadiusX() const;
+    int getSelectedShapeRadiusY() const;
+
 
     // Get shape type
     QString getSelectedShapeType() const;
@@ -115,6 +119,11 @@ private:
                 int endX;   // End X coordinate for line
                 int endY;   // End Y coordinate for line
             } line;
+
+            struct {
+                int radiusX;  // X-axis radius for ellipse
+                int radiusY;  // Y-axis radius for ellipse
+            } ellipse;
         } specific;
     };
 
@@ -164,6 +173,7 @@ private slots:
     void updatePropertyControls();
     void onShapeSelectionChanged();
     void changeLineEndPoint(int);
+    void changeEllipseRadius(int);
 
 private:
     Ui::MainWindow *ui;
@@ -195,10 +205,15 @@ private:
     QWidget *circlePropertiesWidget;
     QSpinBox *circleRadiusSpinBox;
 
-    // Add to MainWindow class declaration in the private section
+    // Line-specific controls
     QWidget *linePropertiesWidget;
     QSpinBox *lineEndXSpinBox;
     QSpinBox *lineEndYSpinBox;
+
+    // Ellipse-specific controls
+    QWidget *ellipsePropertiesWidget;
+    QSpinBox *ellipseRadiusXSpinBox;
+    QSpinBox *ellipseRadiusYSpinBox;
 
     // Helper methods
     void createShapeToolbar();

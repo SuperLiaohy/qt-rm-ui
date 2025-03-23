@@ -14,6 +14,7 @@
 #include <QToolBar>
 #include <QSpinBox>
 #include <QVBoxLayout>
+#include <cmath>
 // DragDropImageLabel 实现
 DragDropImageLabel::DragDropImageLabel(QWidget *parent) : QLabel(parent)
 {
@@ -145,22 +146,24 @@ void DragDropImageLabel::dropEvent(QDropEvent *event)
     shape.y = absY;
     shape.sizePercent = 0.05;
     shape.layer = 5; // Default to middle layer
+    shape.borderWidth = 2;
 
     if (shape.type == "圆形") {
         shape.color = Qt::red;
-        shape.specific.circle.radius = 50; // Default radius (in absolute coordinates)
+        shape.specific.circle.radius = 50;
     } else if (shape.type == "矩形") {
         shape.color = Qt::blue;
-        // Set default end point to be 100 units away from starting point
         shape.specific.rect.endX = absX + 100;
         shape.specific.rect.endY = absY + 100;
     } else if (shape.type == "直线") {
         shape.color = Qt::green;
-        // Set default end point to be 100 units away from starting point
         shape.specific.line.endX = absX + 100;
         shape.specific.line.endY = absY + 100;
+    } else if (shape.type == "椭圆") {
+        shape.color = Qt::magenta;
+        shape.specific.ellipse.radiusX = 50; // Default X radius
+        shape.specific.ellipse.radiusY = 30; // Default Y radius
     }
-    shape.borderWidth = 2;
 
     shapes.append(shape);
 
@@ -283,6 +286,31 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event)
             }
 
             painter.drawLine(imgStartX, imgStartY, imgEndX, imgEndY);
+        }
+        else if (shape.type == "椭圆") {
+            // Convert from absolute coordinates to screen coordinates
+            double relX = (double)shape.x / 1920 * originalPixmap.width();
+            double relY = (double)shape.y / 1080 * originalPixmap.height();
+
+            int imgX = x + relX * scaleX;
+            int imgY = y + relY * scaleY;
+
+            // Convert radii from absolute to screen coordinates
+            double radiusXRel = (double)shape.specific.ellipse.radiusX / 1920 * originalPixmap.width();
+            double radiusYRel = (double)shape.specific.ellipse.radiusY / 1080 * originalPixmap.height();
+            int radiusXScreen = radiusXRel * scaleX;
+            int radiusYScreen = radiusYRel * scaleY;
+
+            QRect ellipseRect(imgX - radiusXScreen, imgY - radiusYScreen,
+                            radiusXScreen * 2, radiusYScreen * 2);
+
+            // Draw selection rectangle if selected
+            if (idx == selectedShapeIndex) {
+                painter.drawRect(ellipseRect.adjusted(-3, -3, 3, 3));
+                painter.setPen(QPen(shape.color.darker(120), shape.borderWidth));
+            }
+
+            painter.drawEllipse(ellipseRect);
         }
     }
 }
@@ -485,6 +513,50 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event)
                 break;
             }
         }
+                else if (shape.type == "椭圆") {
+                    // Convert center point to screen coordinates
+                    double relX = (double)shape.x / 1920 * originalPixmap.width();
+                    double relY = (double)shape.y / 1080 * originalPixmap.height();
+                    int imgX = x + relX * scaleX;
+                    int imgY = y + relY * scaleY;
+
+                    // Convert radii to screen coordinates
+                    double radiusXRel = (double)shape.specific.ellipse.radiusX / 1920 * originalPixmap.width();
+                    double radiusYRel = (double)shape.specific.ellipse.radiusY / 1080 * originalPixmap.height();
+                    int radiusXScreen = radiusXRel * scaleX;
+                    int radiusYScreen = radiusYRel * scaleY;
+
+                    // Calculate position relative to ellipse center
+                    int relClickX = event->pos().x() - imgX;
+                    int relClickY = event->pos().y() - imgY;
+
+                    // Simpler approach: check if point is close to the ellipse boundary
+                    // Formula for point (x,y) on ellipse with center (0,0): (x²/a²) + (y²/b²) = 1
+                    // Where a and b are the semi-major and semi-minor axes
+                    double normalizedDistSquared =
+                        (relClickX * relClickX) / (radiusXScreen * radiusXScreen) +
+                        (relClickY * relClickY) / (radiusYScreen * radiusYScreen);
+
+                    // Selection tolerance (distance from the ellipse boundary)
+                    double selectionWidth = qMax(5, shape.borderWidth);
+                    double innerLimit = pow(1.0 - selectionWidth / qMin(radiusXScreen, radiusYScreen), 2);
+                    double outerLimit = pow(1.0 + selectionWidth / qMin(radiusXScreen, radiusYScreen), 2);
+
+                    if (normalizedDistSquared >= innerLimit && normalizedDistSquared <= outerLimit) {
+                        selectedShapeIndex = i;
+                        dragMode = DRAG_SHAPE;
+
+                        // Store the offset between click point and shape center
+                        QPoint clickOffset(relClickX, relClickY);
+
+                        // Calculate the offset in original coordinates
+                        dragStartPos = QPoint(
+                            clickOffset.x() / scaleX * 1920 / originalPixmap.width(),
+                            clickOffset.y() / scaleY * 1080 / originalPixmap.height()
+                        );
+                        break;
+                    }
+                }
 
     }
 
@@ -769,6 +841,36 @@ void DragDropImageLabel::setLineEndPoint(int x, int y)
         }
 }
 
+void DragDropImageLabel::setEllipseRadius(int radiusX, int radiusY)
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "椭圆") {
+        shapes[selectedShapeIndex].specific.ellipse.radiusX = qBound(1, radiusX, 500);
+        shapes[selectedShapeIndex].specific.ellipse.radiusY = qBound(1, radiusY, 500);
+        update();
+        }
+}
+
+int DragDropImageLabel::getSelectedShapeRadiusX() const
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "椭圆") {
+        return shapes[selectedShapeIndex].specific.ellipse.radiusX;
+        }
+    return 50; // Default X radius if no ellipse is selected
+}
+
+int DragDropImageLabel::getSelectedShapeRadiusY() const
+{
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "椭圆") {
+        return shapes[selectedShapeIndex].specific.ellipse.radiusY;
+        }
+    return 30; // Default Y radius if no ellipse is selected
+}
+
+
+
 // ShapeListItem 实现
 ShapeListItem::ShapeListItem(const QString &text, QListWidget *parent)
     : QListWidgetItem(text, parent)
@@ -843,6 +945,19 @@ void MainWindow::changeLineEndPoint(int)
         imageLabel->setLineEndPoint(lineEndXSpinBox->value(), lineEndYSpinBox->value());
         }
 }
+
+void MainWindow::changeEllipseRadius(int)
+{
+    auto *imageLabel = dynamic_cast<DragDropImageLabel*>(this->imageLabel);
+    if (imageLabel && imageLabel->hasSelectedShape() &&
+        imageLabel->getSelectedShapeType() == "椭圆") {
+        imageLabel->setEllipseRadius(
+            ellipseRadiusXSpinBox->value(),
+            ellipseRadiusYSpinBox->value()
+        );
+        }
+}
+
 
 void ShapeListWidget::startDrag(Qt::DropActions supportedActions)
 {
@@ -942,6 +1057,20 @@ void MainWindow::updatePropertyControls()
         // Show line properties panel
         shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
     }
+    else if (shapeType == "椭圆") {
+        // Set up ellipse-specific controls
+        ellipseRadiusXSpinBox->blockSignals(true);
+        ellipseRadiusYSpinBox->blockSignals(true);
+
+        ellipseRadiusXSpinBox->setValue(imageLabel->getSelectedShapeRadiusX());
+        ellipseRadiusYSpinBox->setValue(imageLabel->getSelectedShapeRadiusY());
+
+        ellipseRadiusXSpinBox->blockSignals(false);
+        ellipseRadiusYSpinBox->blockSignals(false);
+
+        // Show ellipse properties panel
+        shapeSpecificControls->setCurrentWidget(ellipsePropertiesWidget);
+    }
 }
 // Modified version of createShapeToolbar to include shape-specific property controls
 void MainWindow::createShapeToolbar()
@@ -967,6 +1096,10 @@ void MainWindow::createShapeToolbar()
     // Add this to your createShapeToolbar() method after the rectangle item
     auto *lineItem = new ShapeListItem(tr("直线"), shapesListWidget);
     lineItem->setIcon(QIcon(createShapeIcon("直线")));
+
+    // Add this to your createShapeToolbar() method after the line item
+    auto *ellipseItem = new ShapeListItem(tr("椭圆"), shapesListWidget);
+    ellipseItem->setIcon(QIcon(createShapeIcon("椭圆")));
 
     shapesDock->setWidget(shapesListWidget);
     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
@@ -1104,10 +1237,35 @@ void MainWindow::createShapeToolbar()
     lineLayout->addWidget(lineEndYSpinBox);
     lineLayout->addStretch();
 
-    // Add widgets to stacked widget
-    shapeSpecificControls->addWidget(linePropertiesWidget);
 
-    // Add widgets to stacked widget
+    // Ellipse properties
+    ellipsePropertiesWidget = new QWidget();
+    QVBoxLayout *ellipseLayout = new QVBoxLayout(ellipsePropertiesWidget);
+
+    QLabel *ellipseRadiusXLabel = new QLabel(tr("X轴半径:"));
+    ellipseRadiusXSpinBox = new QSpinBox();
+    ellipseRadiusXSpinBox->setRange(1, 500);
+    ellipseRadiusXSpinBox->setSingleStep(1);
+    connect(ellipseRadiusXSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeEllipseRadius);
+
+    QLabel *ellipseRadiusYLabel = new QLabel(tr("Y轴半径:"));
+    ellipseRadiusYSpinBox = new QSpinBox();
+    ellipseRadiusYSpinBox->setRange(1, 500);
+    ellipseRadiusYSpinBox->setSingleStep(1);
+    connect(ellipseRadiusYSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeEllipseRadius);
+
+    ellipseLayout->addWidget(ellipseRadiusXLabel);
+    ellipseLayout->addWidget(ellipseRadiusXSpinBox);
+    ellipseLayout->addWidget(ellipseRadiusYLabel);
+    ellipseLayout->addWidget(ellipseRadiusYSpinBox);
+    ellipseLayout->addStretch();
+
+
+
+    shapeSpecificControls->addWidget(ellipsePropertiesWidget);
+    shapeSpecificControls->addWidget(linePropertiesWidget);
     shapeSpecificControls->addWidget(rectanglePropertiesWidget);
     shapeSpecificControls->addWidget(circlePropertiesWidget);
 
@@ -1205,6 +1363,9 @@ QPixmap MainWindow::createShapeIcon(const QString &shape)
     } else if (shape == "直线") {
         painter.setPen(QPen(Qt::green, 2));
         painter.drawLine(5, 5, 35, 35);
+    } else if (shape == "椭圆") {
+        painter.setPen(QPen(Qt::magenta, 2));
+        painter.drawEllipse(5, 10, 30, 20); // Draw wider than tall for ellipse icon
     }
 
     return pixmap;
