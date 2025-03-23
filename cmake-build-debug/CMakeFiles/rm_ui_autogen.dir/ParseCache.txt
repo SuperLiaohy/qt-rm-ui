@@ -213,6 +213,7 @@
  mdp:/usr/include/x86_64-linux-gnu/c++/10/bits/os_defines.h
  mdp:/usr/include/x86_64-linux-gnu/gnu/stubs-64.h
  mdp:/usr/include/x86_64-linux-gnu/gnu/stubs.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/QMimeData
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qabstractitemmodel.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qalgorithms.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qarraydata.h
@@ -243,6 +244,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qmap.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qmargins.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qmetatype.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qmimedata.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qnamespace.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qnumeric.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qobject.h
@@ -276,9 +278,11 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qvarlengtharray.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qvector.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtCore/qversiontagging.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/QDrag
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qbrush.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qcolor.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qcursor.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qdrag.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qfont.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qfontinfo.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qfontmetrics.h
@@ -313,6 +317,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QListWidget
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QMainWindow
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QSpinBox
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QStackedWidget
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QToolBar
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractbutton.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractitemdelegate.h
@@ -339,6 +344,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qsizepolicy.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qslider.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qspinbox.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qstackedwidget.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qstyle.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qstyleoption.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qtabbar.h
