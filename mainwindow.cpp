@@ -1553,6 +1553,129 @@ void MainWindow::loadShapesFromFile() {
     QMessageBox::information(this, tr("加载成功"), tr("形状数据已成功从文件加载。"));
 }
 
+void MainWindow::exportControlsInfo() {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
+    if (!imageLabel || imageLabel->shapes.isEmpty()) {
+        QMessageBox::information(this, tr("没有控件"), tr("当前画布上没有控件信息可以导出。"));
+        return;
+    }
+
+    QString fileName = QFileDialog::getSaveFileName(this, tr("导出控件信息"),
+                                                  QString(), tr("文本文件 (*.txt)"));
+    if (fileName.isEmpty())
+        return;
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("无法保存文件"),
+                           tr("无法打开文件 %1 进行写入。\n%2.")
+                           .arg(fileName, file.errorString()));
+        return;
+    }
+
+    QTextStream out(&file);
+    out.setCodec("UTF-8");
+
+    // Write header
+    out << "控件信息表\n";
+    out << "==========\n\n";
+    out << "生成时间：" << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") << "\n\n";
+
+    // Summary information
+    out << "控件总数：" << imageLabel->shapes.size() << "\n";
+
+    // Count by type
+    QMap<QString, int> typeCount;
+    for (const auto &shape : imageLabel->shapes) {
+        typeCount[shape.type]++;
+    }
+
+    out << "控件类型统计：\n";
+    for (auto it = typeCount.constBegin(); it != typeCount.constEnd(); ++it) {
+        out << "  " << it.key() << ": " << it.value() << " 个\n";
+    }
+    out << "\n";
+
+    // Table header
+    out << "控件详细信息\n";
+    out << "============\n\n";
+    out << QString("%1\t%2\t%3\t%4\t%5\t%6\t%7\n")
+           .arg("序号", 4)
+           .arg("类型", 10)
+           .arg("位置(X,Y)", 15)
+           .arg("图层", 5)
+           .arg("颜色", 10)
+           .arg("边框宽度", 8)
+           .arg("特定属性");
+
+    out << QString("%1\t%2\t%3\t%4\t%5\t%6\t%7\n")
+           .arg("----", 4)
+           .arg("----------", 10)
+           .arg("---------------", 15)
+           .arg("-----", 5)
+           .arg("----------", 10)
+           .arg("--------", 8)
+           .arg("-------------------------------------------");
+
+    // List all controls
+    int index = 1;
+    for (const auto &shape : imageLabel->shapes) {
+        QString position = QString("(%1,%2)").arg(shape.x).arg(shape.y);
+        QString colorName = getNameFromColor(shape.color);
+        QString specificProps;
+
+        if (shape.type == "圆形") {
+            specificProps = QString("半径: %1").arg(shape.specific.circle.radius);
+        } else if (shape.type == "矩形") {
+            specificProps = QString("右下角: (%1,%2)")
+                             .arg(shape.specific.rect.endX)
+                             .arg(shape.specific.rect.endY);
+        } else if (shape.type == "直线") {
+            specificProps = QString("终点: (%1,%2)")
+                             .arg(shape.specific.line.endX)
+                             .arg(shape.specific.line.endY);
+        } else if (shape.type == "椭圆") {
+            specificProps = QString("半径X: %1, 半径Y: %2")
+                             .arg(shape.specific.ellipse.radiusX)
+                             .arg(shape.specific.ellipse.radiusY);
+        } else if (shape.type == "圆弧") {
+            specificProps = QString("半径X: %1, 半径Y: %2, 起始角度: %3°, 张角: %4°")
+                             .arg(shape.specific.arc.radiusX)
+                             .arg(shape.specific.arc.radiusY)
+                             .arg(shape.specific.arc.startAngle)
+                             .arg(shape.specific.arc.spanAngle);
+        } else if (shape.type == "整数") {
+            specificProps = QString("值: %1, 字体大小: %2")
+                             .arg(shape.specific.intValue.value)
+                             .arg(shape.specific.intValue.fontSize);
+        } else if (shape.type == "浮点数") {
+            double displayValue = shape.specific.floatValue.value / 1000.0;
+            specificProps = QString("值: %1, 字体大小: %2")
+                             .arg(displayValue, 0, 'f', 3)
+                             .arg(shape.specific.floatValue.fontSize);
+        } else if (shape.type == "文本字符") {
+            QString text = QString::fromUtf8(shape.specific.text.data, shape.specific.text.length);
+            specificProps = QString("文本: \"%1\", 字体大小: %2")
+                             .arg(text)
+                             .arg(shape.specific.text.fontSize);
+        }
+
+        out << QString("%1\t%2\t%3\t%4\t%5\t%6\t%7\n")
+               .arg(index, 4)
+               .arg(shape.type, 10)
+               .arg(position, 15)
+               .arg(shape.layer, 5)
+               .arg(colorName, 10)
+               .arg(shape.borderWidth, 8)
+               .arg(specificProps);
+
+        index++;
+    }
+
+    file.close();
+    QMessageBox::information(this, tr("导出成功"), tr("控件信息已成功导出到文件。"));
+}
+
 
 void ShapeListWidget::startDrag(Qt::DropActions supportedActions) {
     QListWidgetItem *item = currentItem();
@@ -1763,6 +1886,7 @@ QList<QString> MainWindow::getAvailableColors() const {
 // Modified version of createShapeToolbar to include shape-specific property controls
 void MainWindow::createShapeToolbar() {
 
+    // Create toolbar for save/load functionality
     QToolBar *fileToolbar = addToolBar(tr("文件操作"));
 
     QAction *saveAction = fileToolbar->addAction(tr("保存"));
@@ -1770,6 +1894,9 @@ void MainWindow::createShapeToolbar() {
 
     QAction *loadAction = fileToolbar->addAction(tr("加载"));
     connect(loadAction, &QAction::triggered, this, &MainWindow::loadShapesFromFile);
+
+    QAction *exportInfoAction = fileToolbar->addAction(tr("导出控件信息"));
+    connect(exportInfoAction, &QAction::triggered, this, &MainWindow::exportControlsInfo);
 
     // Create the shapes dock widget and list (your existing code)
     shapesDock = new QDockWidget(tr("形状工具"), this);

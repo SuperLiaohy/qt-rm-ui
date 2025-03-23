@@ -283,6 +283,8 @@ private slots:
 
     void loadShapesFromFile();
 
+    void exportControlsInfo();
+
 private:
     Ui::MainWindow *ui;
     QLabel *imageLabel;
