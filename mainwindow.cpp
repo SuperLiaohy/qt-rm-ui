@@ -1705,35 +1705,55 @@ void ShapeListWidget::startDrag(Qt::DropActions supportedActions) {
 // This overrides the updatePropertyControls method to include shape-specific properties
 void MainWindow::updatePropertyControls() {
     auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
-    if (imageLabel && imageLabel->hasSelectedShape()) {
-        // Update the common properties
-        xPosSpinBox->blockSignals(true);
-        yPosSpinBox->blockSignals(true);
-        layerSpinBox->blockSignals(true);
-        widthSpinBox->blockSignals(true);
+    if (!imageLabel || !imageLabel->hasSelectedShape()) {
+        // Disable all controls if no shape is selected
+        widthSpinBox->setEnabled(false);
+        xPosSpinBox->setEnabled(false);
+        yPosSpinBox->setEnabled(false);
+        layerSpinBox->setEnabled(false);
+        shapeSpecificControls->setEnabled(false);
+        return;
+    }
 
-        xPosSpinBox->setValue(imageLabel->getSelectedShapeX());
-        yPosSpinBox->setValue(imageLabel->getSelectedShapeY());
-        layerSpinBox->setValue(imageLabel->getSelectedShapeLayer());
-        widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
 
-        // Set color combobox
-        QColor shapeColor = imageLabel->getSelectedShapeColor();
-        QString colorName = getNameFromColor(shapeColor);
-        int colorIndex = colorComboBox->findText(colorName);
-        if (colorIndex >= 0) {
-            colorComboBox->setCurrentIndex(colorIndex);
-        }
+    // Enable controls
+    widthSpinBox->setEnabled(true);
+    xPosSpinBox->setEnabled(true);
+    yPosSpinBox->setEnabled(true);
+    layerSpinBox->setEnabled(true);
+    shapeSpecificControls->setEnabled(true);
 
-        xPosSpinBox->blockSignals(false);
-        yPosSpinBox->blockSignals(false);
-        layerSpinBox->blockSignals(false);
-        widthSpinBox->blockSignals(false);
+    // Update color combo box
+    colorComboBox->blockSignals(true);
+    QString colorName = getNameFromColor(imageLabel->getSelectedShapeColor());
+    int colorIndex = colorComboBox->findText(colorName);
+    if (colorIndex != -1) {
+        colorComboBox->setCurrentIndex(colorIndex);
+    }
+    colorComboBox->blockSignals(false);
 
-        // Shape-specific properties
-        QString shapeType = imageLabel->getSelectedShapeType();
+    // Block signals to prevent feedback loop
+    widthSpinBox->blockSignals(true);
+    xPosSpinBox->blockSignals(true);
+    yPosSpinBox->blockSignals(true);
+    layerSpinBox->blockSignals(true);
 
-        if (shapeType == "矩形") {
+    // Update controls with current values - using accessor methods
+    widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
+    xPosSpinBox->setValue(imageLabel->getSelectedShapeX());
+    yPosSpinBox->setValue(imageLabel->getSelectedShapeY());
+    layerSpinBox->setValue(imageLabel->getSelectedShapeLayer());
+
+    // Re-enable signals
+    widthSpinBox->blockSignals(false);
+    xPosSpinBox->blockSignals(false);
+    yPosSpinBox->blockSignals(false);
+    layerSpinBox->blockSignals(false);
+
+    // Handle shape-specific properties separately
+    QString shapeType = imageLabel->getSelectedShapeType();
+
+    if (shapeType == "矩形") {
         // Set up rectangle-specific controls
         rectEndXSpinBox->blockSignals(true);
         rectEndYSpinBox->blockSignals(true);
@@ -1755,9 +1775,7 @@ void MainWindow::updatePropertyControls() {
         // Show circle properties panel
         shapeSpecificControls->setCurrentWidget(circlePropertiesWidget);
     } else if (shapeType == "直线") {
-        shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
-
-        // Here's the problem - need to properly block signals and update values
+        // Set up line-specific controls
         lineEndXSpinBox->blockSignals(true);
         lineEndYSpinBox->blockSignals(true);
 
@@ -1766,6 +1784,9 @@ void MainWindow::updatePropertyControls() {
 
         lineEndXSpinBox->blockSignals(false);
         lineEndYSpinBox->blockSignals(false);
+
+        // Show line properties panel
+        shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
     } else if (shapeType == "椭圆") {
         // Set up ellipse-specific controls
         ellipseRadiusXSpinBox->blockSignals(true);
@@ -1832,9 +1853,6 @@ void MainWindow::updatePropertyControls() {
         textLineEdit->blockSignals(false);
         textFontSizeSpinBox->blockSignals(false);
     }
-    }
-
-
 }
 QColor MainWindow::getColorFromName(const QString &colorName) const {
     if (colorName == "红色") return Qt::red;
