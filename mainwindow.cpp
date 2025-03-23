@@ -166,6 +166,10 @@ void DragDropImageLabel::dropEvent(QDropEvent *event) {
         shape.color = Qt::black;
         shape.specific.intValue.value = 0; // Default value
         shape.specific.intValue.fontSize = 16; // Default font size
+    } else if (shape.type == "浮点数") {
+        shape.color = Qt::black;
+        shape.specific.floatValue.value = 0; // Default value
+        shape.specific.floatValue.fontSize = 16; // Default font size
     }
 
     shapes.append(shape);
@@ -376,6 +380,21 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event) {
 
             // Draw the integer value as text
             QString text = QString::number(shape.specific.intValue.value);
+            painter.drawText(imgX, imgY, text);
+        } else if (shape.type == "浮点数") {
+            // Calculate scaled position
+            double relX = (double) shape.x / 1920 * originalPixmap.width();
+            double relY = (double) shape.y / 1080 * originalPixmap.height();
+            int imgX = x + relX * scaleX;
+            int imgY = y + relY * scaleY;
+
+            // Set font size and family
+            QFont font("Arial", shape.specific.floatValue.fontSize);
+            painter.setFont(font);
+
+            // Draw the float value as text (divided by 1000)
+            double displayValue = shape.specific.floatValue.value / 1000.0;
+            QString text = QString::number(displayValue, 'f', 3);
             painter.drawText(imgX, imgY, text);
         }
     }
@@ -712,6 +731,27 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event) {
                 QFont font("Arial", shape.specific.intValue.fontSize);
                 QFontMetrics metrics(font);
                 QString text = QString::number(shape.specific.intValue.value);
+                QRect textRect = metrics.boundingRect(text);
+                textRect.moveTo(imgX, imgY - metrics.ascent());
+
+                // Add some padding for easier selection
+                textRect.adjust(-5, -5, 5, 5);
+
+                if (textRect.contains(event->pos())) {
+                    isHit = true;
+                }
+            } else if (shape.type == "浮点数") {
+                // Calculate position for testing
+                double relX = (double) shape.x / 1920 * originalPixmap.width();
+                double relY = (double) shape.y / 1080 * originalPixmap.height();
+                int imgX = x + relX * scaleX;
+                int imgY = y + relY * scaleY;
+
+                // Create a hit area around the text
+                QFont font("Arial", shape.specific.floatValue.fontSize);
+                QFontMetrics metrics(font);
+                double displayValue = shape.specific.floatValue.value / 1000.0;
+                QString text = QString::number(displayValue, 'f', 3);
                 QRect textRect = metrics.boundingRect(text);
                 textRect.moveTo(imgX, imgY - metrics.ascent());
 
@@ -1114,6 +1154,39 @@ void DragDropImageLabel::setIntFontSize(int fontSize) {
     }
 }
 
+
+int32_t DragDropImageLabel::getSelectedShapeFloatValue() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "浮点数") {
+        return shapes[selectedShapeIndex].specific.floatValue.value;
+    }
+    return 0; // Default value if no float shape is selected
+}
+
+int DragDropImageLabel::getSelectedShapeFloatFontSize() const {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "浮点数") {
+        return shapes[selectedShapeIndex].specific.floatValue.fontSize;
+    }
+    return 12; // Default font size if no float shape is selected
+}
+
+void DragDropImageLabel::setFloatValue(int32_t value) {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "浮点数") {
+        shapes[selectedShapeIndex].specific.floatValue.value = value;
+        update();
+    }
+}
+
+void DragDropImageLabel::setFloatFontSize(int fontSize) {
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
+        shapes[selectedShapeIndex].type == "浮点数") {
+        shapes[selectedShapeIndex].specific.floatValue.fontSize = qBound(8, fontSize, 72);
+        update();
+    }
+}
+
 // ShapeListItem 实现
 ShapeListItem::ShapeListItem(const QString &text, QListWidget *parent)
     : QListWidgetItem(text, parent) {
@@ -1212,6 +1285,15 @@ void MainWindow::changeIntProperties(int) {
         imageLabel->getSelectedShapeType() == "整数") {
         imageLabel->setIntValue(intValueSpinBox->value());
         imageLabel->setIntFontSize(intFontSizeSpinBox->value());
+    }
+}
+
+void MainWindow::changeFloatProperties(int) {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
+    if (imageLabel && imageLabel->hasSelectedShape() &&
+        imageLabel->getSelectedShapeType() == "浮点数") {
+        imageLabel->setFloatValue(floatValueSpinBox->value());
+        imageLabel->setFloatFontSize(floatFontSizeSpinBox->value());
     }
 }
 
@@ -1351,6 +1433,17 @@ void MainWindow::updatePropertyControls() {
 
         intValueSpinBox->blockSignals(false);
         intFontSizeSpinBox->blockSignals(false);
+    } else if (shapeType == "浮点数") {
+        shapeSpecificControls->setCurrentWidget(floatValuePropertiesWidget);
+
+        floatValueSpinBox->blockSignals(true);
+        floatFontSizeSpinBox->blockSignals(true);
+
+        floatValueSpinBox->setValue(imageLabel->getSelectedShapeFloatValue());
+        floatFontSizeSpinBox->setValue(imageLabel->getSelectedShapeFloatFontSize());
+
+        floatValueSpinBox->blockSignals(false);
+        floatFontSizeSpinBox->blockSignals(false);
     }
 }
 
@@ -1389,6 +1482,8 @@ void MainWindow::createShapeToolbar() {
     auto *intValueItem = new ShapeListItem(tr("整数"), shapesListWidget);
     intValueItem->setIcon(QIcon(createShapeIcon("整数")));
 
+    auto *floatValueItem = new ShapeListItem(tr("浮点数"), shapesListWidget);
+    floatValueItem->setIcon(QIcon(createShapeIcon("浮点数")));
 
     shapesDock->setWidget(shapesListWidget);
     addDockWidget(Qt::RightDockWidgetArea, shapesDock);
@@ -1618,7 +1713,32 @@ void MainWindow::createShapeToolbar() {
     intValueLayout->addWidget(intFontSizeSpinBox);
     intValueLayout->addStretch();
 
+    // Create float value properties widget
+    floatValuePropertiesWidget = new QWidget();
+    QVBoxLayout *floatValueLayout = new QVBoxLayout(floatValuePropertiesWidget);
+
+    QLabel *floatValueLabel = new QLabel(tr("浮点数值 (x/1000):"));
+    floatValueSpinBox = new QSpinBox();
+    floatValueSpinBox->setRange(INT_MIN, INT_MAX);
+    floatValueSpinBox->setSingleStep(1);
+    connect(floatValueSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeFloatProperties);
+
+    QLabel *floatFontSizeLabel = new QLabel(tr("字体大小:"));
+    floatFontSizeSpinBox = new QSpinBox();
+    floatFontSizeSpinBox->setRange(8, 72);
+    floatFontSizeSpinBox->setSingleStep(1);
+    connect(floatFontSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::changeFloatProperties);
+
+    floatValueLayout->addWidget(floatValueLabel);
+    floatValueLayout->addWidget(floatValueSpinBox);
+    floatValueLayout->addWidget(floatFontSizeLabel);
+    floatValueLayout->addWidget(floatFontSizeSpinBox);
+    floatValueLayout->addStretch();
+
     // Add to your stacked widget:
+    shapeSpecificControls->addWidget(floatValuePropertiesWidget);
     shapeSpecificControls->addWidget(intValuePropertiesWidget);
     shapeSpecificControls->addWidget(arcPropertiesWidget);
     shapeSpecificControls->addWidget(ellipsePropertiesWidget);
@@ -1721,6 +1841,10 @@ QPixmap MainWindow::createShapeIcon(const QString &shape) {
         painter.setPen(QPen(Qt::black, 2));
         painter.setFont(QFont("Arial", 12));
         painter.drawText(5, 25, "123");
+    } else if (shape == "浮点数") {
+        painter.setPen(QPen(Qt::black, 2));
+        painter.setFont(QFont("Arial", 12));
+        painter.drawText(5, 25, "1.234");
     }
 
     return pixmap;

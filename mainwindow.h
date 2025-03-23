@@ -82,6 +82,10 @@ public:
     int getSelectedShapeIntFontSize() const;
     void setIntValue(int32_t value);
     void setIntFontSize(int fontSize);
+    int32_t getSelectedShapeFloatValue() const;
+    int getSelectedShapeFloatFontSize() const;
+    void setFloatValue(int32_t value);
+    void setFloatFontSize(int fontSize);
 
     // Get shape type
     QString getSelectedShapeType() const;
@@ -144,6 +148,11 @@ private:
                 int32_t value;    // The int32_t value to display
                 int fontSize;     // Font size for displaying the value
             } intValue;
+
+            struct {
+                int32_t value;    // The int32_t value to display (will be divided by 1000 for display)
+                int fontSize;     // Font size for displaying the value
+            } floatValue;
         } specific;
     };
 
@@ -196,6 +205,7 @@ private slots:
     void changeEllipseRadius(int);
     void changeArcProperties(int);
     void changeIntProperties(int);
+    void changeFloatProperties(int);
 
 private:
     Ui::MainWindow *ui;
@@ -249,6 +259,10 @@ private:
     QSpinBox *intValueSpinBox;
     QSpinBox *intFontSizeSpinBox;
 
+    // Float-specific controls
+    QWidget *floatValuePropertiesWidget;
+    QSpinBox *floatValueSpinBox;
+    QSpinBox *floatFontSizeSpinBox;
 
     // Helper methods
     void createShapeToolbar();
