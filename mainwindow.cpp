@@ -934,17 +934,17 @@ void DragDropImageLabel::mouseMoveEvent(QMouseEvent *event) {
         mouseY = qBound(0, mouseY, 1080);
 
         if (dragCorner == 0) {
-            // Start point
+            // First endpoint (start point)
             shapes[selectedShapeIndex].x = mouseX;
             shapes[selectedShapeIndex].y = mouseY;
         } else if (dragCorner == 1) {
-            // End point
+            // Second endpoint (end point)
             shapes[selectedShapeIndex].specific.line.endX = mouseX;
             shapes[selectedShapeIndex].specific.line.endY = mouseY;
         }
 
         update();
-        emit selectionChanged();
+        emit selectionChanged(); // This line is critical - it notifies the UI to update
     }
 }
 
@@ -1053,21 +1053,28 @@ QString DragDropImageLabel::getSelectedShapeType() const {
 }
 
 int DragDropImageLabel::getSelectedShapeEndX() const {
-    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
-        shapes[selectedShapeIndex].type == "矩形") {
-        return shapes[selectedShapeIndex].specific.rect.endX;
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        const Shape &shape = shapes[selectedShapeIndex];
+        if (shape.type == "矩形") {
+            return shape.specific.rect.endX;
+        } else if (shape.type == "直线") {
+            return shape.specific.line.endX;
+        }
     }
-    return 0; // Default value if no rectangle is selected
+    return 0;
 }
 
 int DragDropImageLabel::getSelectedShapeEndY() const {
-    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
-        shapes[selectedShapeIndex].type == "矩形") {
-        return shapes[selectedShapeIndex].specific.rect.endY;
+    if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+        const Shape &shape = shapes[selectedShapeIndex];
+        if (shape.type == "矩形") {
+            return shape.specific.rect.endY;
+        } else if (shape.type == "直线") {
+            return shape.specific.line.endY;
+        }
     }
-    return 0; // Default value if no rectangle is selected
+    return 0;
 }
-
 int DragDropImageLabel::getSelectedShapeRadius() const {
     if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size() &&
         shapes[selectedShapeIndex].type == "圆形") {
@@ -1698,55 +1705,35 @@ void ShapeListWidget::startDrag(Qt::DropActions supportedActions) {
 // This overrides the updatePropertyControls method to include shape-specific properties
 void MainWindow::updatePropertyControls() {
     auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
-    if (!imageLabel || !imageLabel->hasSelectedShape()) {
-        // Disable all controls if no shape is selected
-        widthSpinBox->setEnabled(false);
-        xPosSpinBox->setEnabled(false);
-        yPosSpinBox->setEnabled(false);
-        layerSpinBox->setEnabled(false);
-        shapeSpecificControls->setEnabled(false);
-        return;
-    }
+    if (imageLabel && imageLabel->hasSelectedShape()) {
+        // Update the common properties
+        xPosSpinBox->blockSignals(true);
+        yPosSpinBox->blockSignals(true);
+        layerSpinBox->blockSignals(true);
+        widthSpinBox->blockSignals(true);
 
+        xPosSpinBox->setValue(imageLabel->getSelectedShapeX());
+        yPosSpinBox->setValue(imageLabel->getSelectedShapeY());
+        layerSpinBox->setValue(imageLabel->getSelectedShapeLayer());
+        widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
 
-    // Enable controls
-    widthSpinBox->setEnabled(true);
-    xPosSpinBox->setEnabled(true);
-    yPosSpinBox->setEnabled(true);
-    layerSpinBox->setEnabled(true);
-    shapeSpecificControls->setEnabled(true);
+        // Set color combobox
+        QColor shapeColor = imageLabel->getSelectedShapeColor();
+        QString colorName = getNameFromColor(shapeColor);
+        int colorIndex = colorComboBox->findText(colorName);
+        if (colorIndex >= 0) {
+            colorComboBox->setCurrentIndex(colorIndex);
+        }
 
-    // Update color combo box
-    colorComboBox->blockSignals(true);
-    QString colorName = getNameFromColor(imageLabel->getSelectedShapeColor());
-    int colorIndex = colorComboBox->findText(colorName);
-    if (colorIndex != -1) {
-        colorComboBox->setCurrentIndex(colorIndex);
-    }
-    colorComboBox->blockSignals(false);
+        xPosSpinBox->blockSignals(false);
+        yPosSpinBox->blockSignals(false);
+        layerSpinBox->blockSignals(false);
+        widthSpinBox->blockSignals(false);
 
-    // Block signals to prevent feedback loop
-    widthSpinBox->blockSignals(true);
-    xPosSpinBox->blockSignals(true);
-    yPosSpinBox->blockSignals(true);
-    layerSpinBox->blockSignals(true);
+        // Shape-specific properties
+        QString shapeType = imageLabel->getSelectedShapeType();
 
-    // Update controls with current values - using accessor methods
-    widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
-    xPosSpinBox->setValue(imageLabel->getSelectedShapeX());
-    yPosSpinBox->setValue(imageLabel->getSelectedShapeY());
-    layerSpinBox->setValue(imageLabel->getSelectedShapeLayer());
-
-    // Re-enable signals
-    widthSpinBox->blockSignals(false);
-    xPosSpinBox->blockSignals(false);
-    yPosSpinBox->blockSignals(false);
-    layerSpinBox->blockSignals(false);
-
-    // Handle shape-specific properties separately
-    QString shapeType = imageLabel->getSelectedShapeType();
-
-    if (shapeType == "矩形") {
+        if (shapeType == "矩形") {
         // Set up rectangle-specific controls
         rectEndXSpinBox->blockSignals(true);
         rectEndYSpinBox->blockSignals(true);
@@ -1768,7 +1755,9 @@ void MainWindow::updatePropertyControls() {
         // Show circle properties panel
         shapeSpecificControls->setCurrentWidget(circlePropertiesWidget);
     } else if (shapeType == "直线") {
-        // Set up line-specific controls
+        shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
+
+        // Here's the problem - need to properly block signals and update values
         lineEndXSpinBox->blockSignals(true);
         lineEndYSpinBox->blockSignals(true);
 
@@ -1777,9 +1766,6 @@ void MainWindow::updatePropertyControls() {
 
         lineEndXSpinBox->blockSignals(false);
         lineEndYSpinBox->blockSignals(false);
-
-        // Show line properties panel
-        shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
     } else if (shapeType == "椭圆") {
         // Set up ellipse-specific controls
         ellipseRadiusXSpinBox->blockSignals(true);
@@ -1846,6 +1832,9 @@ void MainWindow::updatePropertyControls() {
         textLineEdit->blockSignals(false);
         textFontSizeSpinBox->blockSignals(false);
     }
+    }
+
+
 }
 QColor MainWindow::getColorFromName(const QString &colorName) const {
     if (colorName == "红色") return Qt::red;
