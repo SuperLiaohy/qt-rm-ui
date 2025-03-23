@@ -140,6 +140,7 @@ void DragDropImageLabel::dropEvent(QDropEvent *event) {
     shape.sizePercent = 0.05;
     shape.layer = 5; // Default to middle layer
     shape.borderWidth = 2;
+    shape.color = Qt::black; // Default color is black
 
     if (shape.type == "圆形") {
         shape.color = Qt::red;
@@ -387,6 +388,7 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event) {
             // Set font size and family
             QFont font("Arial", shape.specific.intValue.fontSize);
             painter.setFont(font);
+            painter.setPen(QPen(shape.color, shape.borderWidth));
 
             // Draw the integer value as text
             QString text = QString::number(shape.specific.intValue.value);
@@ -401,6 +403,7 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event) {
             // Set font size and family
             QFont font("Arial", shape.specific.floatValue.fontSize);
             painter.setFont(font);
+            painter.setPen(QPen(shape.color, shape.borderWidth));
 
             // Draw the float value as text (divided by 1000)
             double displayValue = shape.specific.floatValue.value / 1000.0;
@@ -416,7 +419,8 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event) {
             // Set font size and family
             QFont font("Arial", shape.specific.text.fontSize);
             painter.setFont(font);
-
+            // Set the text color from the shape's color property
+            painter.setPen(QPen(shape.color, shape.borderWidth));
             // Draw the text
             QString text = QString::fromUtf8(shape.specific.text.data, shape.specific.text.length);
             painter.drawText(imgX, imgY, text);
@@ -1399,6 +1403,157 @@ void MainWindow::changeTextProperties() {
     }
 }
 
+void MainWindow::saveShapesToFile() {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
+    if (!imageLabel) return;
+
+    QString fileName = QFileDialog::getSaveFileName(this, tr("保存形状数据"),
+                                                   QString(), tr("形状数据文件 (*.shapes)"));
+    if (fileName.isEmpty())
+        return;
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly)) {
+        QMessageBox::warning(this, tr("无法保存文件"),
+                           tr("无法打开文件 %1 进行写入。\n%2.")
+                           .arg(fileName, file.errorString()));
+        return;
+    }
+
+    QDataStream out(&file);
+    out.setVersion(QDataStream::Qt_5_12);
+
+    // Write number of shapes
+    out << imageLabel->shapes.size();
+
+    // Write shapes data
+    for (const auto &shape : imageLabel->shapes) {
+        out << shape.type;
+        out << shape.x;
+        out << shape.y;
+        out << shape.sizePercent;
+        out << shape.color;
+        out << shape.borderWidth;
+        out << shape.layer;
+
+        // Write shape-specific data based on type
+        if (shape.type == "圆形") {
+            out << shape.specific.circle.radius;
+        } else if (shape.type == "矩形") {
+            out << shape.specific.rect.endX;
+            out << shape.specific.rect.endY;
+        } else if (shape.type == "直线") {
+            out << shape.specific.line.endX;
+            out << shape.specific.line.endY;
+        } else if (shape.type == "椭圆") {
+            out << shape.specific.ellipse.radiusX;
+            out << shape.specific.ellipse.radiusY;
+        } else if (shape.type == "圆弧") {
+            out << shape.specific.arc.radiusX;
+            out << shape.specific.arc.radiusY;
+            out << shape.specific.arc.startAngle;
+            out << shape.specific.arc.spanAngle;
+        } else if (shape.type == "整数") {
+            out << shape.specific.intValue.value;
+            out << shape.specific.intValue.fontSize;
+        } else if (shape.type == "浮点数") {
+            out << shape.specific.floatValue.value;
+            out << shape.specific.floatValue.fontSize;
+        } else if (shape.type == "文本字符") {
+            QString text = QString::fromUtf8(shape.specific.text.data, shape.specific.text.length);
+            out << text;
+            out << shape.specific.text.fontSize;
+        }
+    }
+
+    file.close();
+    QMessageBox::information(this, tr("保存成功"), tr("形状数据已成功保存到文件。"));
+}
+
+void MainWindow::loadShapesFromFile() {
+    auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
+    if (!imageLabel) return;
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("加载形状数据"),
+                                                  QString(), tr("形状数据文件 (*.shapes)"));
+    if (fileName.isEmpty())
+        return;
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("无法加载文件"),
+                           tr("无法打开文件 %1 进行读取。\n%2.")
+                           .arg(fileName, file.errorString()));
+        return;
+    }
+
+    QDataStream in(&file);
+    in.setVersion(QDataStream::Qt_5_12);
+
+    // Clear existing shapes
+    imageLabel->shapes.clear();
+
+    // Read number of shapes
+    int shapeCount;
+    in >> shapeCount;
+
+    // Read shapes data
+    for (int i = 0; i < shapeCount; i++) {
+        DragDropImageLabel::Shape shape;
+
+        in >> shape.type;
+        in >> shape.x;
+        in >> shape.y;
+        in >> shape.sizePercent;
+        in >> shape.color;
+        in >> shape.borderWidth;
+        in >> shape.layer;
+
+        // Read shape-specific data based on type
+        if (shape.type == "圆形") {
+            in >> shape.specific.circle.radius;
+        } else if (shape.type == "矩形") {
+            in >> shape.specific.rect.endX;
+            in >> shape.specific.rect.endY;
+        } else if (shape.type == "直线") {
+            in >> shape.specific.line.endX;
+            in >> shape.specific.line.endY;
+        } else if (shape.type == "椭圆") {
+            in >> shape.specific.ellipse.radiusX;
+            in >> shape.specific.ellipse.radiusY;
+        } else if (shape.type == "圆弧") {
+            in >> shape.specific.arc.radiusX;
+            in >> shape.specific.arc.radiusY;
+            in >> shape.specific.arc.startAngle;
+            in >> shape.specific.arc.spanAngle;
+        } else if (shape.type == "整数") {
+            in >> shape.specific.intValue.value;
+            in >> shape.specific.intValue.fontSize;
+        } else if (shape.type == "浮点数") {
+            in >> shape.specific.floatValue.value;
+            in >> shape.specific.floatValue.fontSize;
+        } else if (shape.type == "文本字符") {
+            QString text;
+            in >> text;
+            in >> shape.specific.text.fontSize;
+
+            // Copy text to the shape data structure
+            QByteArray textBytes = text.toUtf8();
+            int length = qMin(textBytes.size(), 29); // Ensure it fits in our 30-char buffer
+            memcpy(shape.specific.text.data, textBytes.constData(), length);
+            shape.specific.text.data[length] = '\0'; // Null-terminate
+            shape.specific.text.length = length;
+        }
+
+        imageLabel->shapes.append(shape);
+    }
+
+    file.close();
+    imageLabel->update(); // Redraw with new shapes
+    QMessageBox::information(this, tr("加载成功"), tr("形状数据已成功从文件加载。"));
+}
+
+
 void ShapeListWidget::startDrag(Qt::DropActions supportedActions) {
     QListWidgetItem *item = currentItem();
     if (item) {
@@ -1430,12 +1585,22 @@ void MainWindow::updatePropertyControls() {
         return;
     }
 
+
     // Enable controls
     widthSpinBox->setEnabled(true);
     xPosSpinBox->setEnabled(true);
     yPosSpinBox->setEnabled(true);
     layerSpinBox->setEnabled(true);
     shapeSpecificControls->setEnabled(true);
+
+    // Update color combo box
+    colorComboBox->blockSignals(true);
+    QString colorName = getNameFromColor(imageLabel->getSelectedShapeColor());
+    int colorIndex = colorComboBox->findText(colorName);
+    if (colorIndex != -1) {
+        colorComboBox->setCurrentIndex(colorIndex);
+    }
+    colorComboBox->blockSignals(false);
 
     // Block signals to prevent feedback loop
     widthSpinBox->blockSignals(true);
@@ -1559,9 +1724,53 @@ void MainWindow::updatePropertyControls() {
         textFontSizeSpinBox->blockSignals(false);
     }
 }
+QColor MainWindow::getColorFromName(const QString &colorName) const {
+    if (colorName == "红色") return Qt::red;
+    if (colorName == "黄色") return Qt::yellow;
+    if (colorName == "绿色") return Qt::green;
+    if (colorName == "橙色") return QColor(255, 165, 0);
+    if (colorName == "紫红色") return Qt::magenta;
+    if (colorName == "粉色") return QColor(255, 192, 203);
+    if (colorName == "青色") return Qt::cyan;
+    if (colorName == "黑色") return Qt::black;
+    if (colorName == "白色") return Qt::white;
+    return Qt::black; // Default
+}
 
+QString MainWindow::getNameFromColor(const QColor &color) const {
+    // Define some tolerance for color comparison
+    auto isSimilarColor = [](const QColor &a, const QColor &b, int tolerance = 30) {
+        return qAbs(a.red() - b.red()) <= tolerance &&
+               qAbs(a.green() - b.green()) <= tolerance &&
+               qAbs(a.blue() - b.blue()) <= tolerance;
+    };
+
+    if (isSimilarColor(color, Qt::red)) return "红色";
+    if (isSimilarColor(color, Qt::yellow)) return "黄色";
+    if (isSimilarColor(color, Qt::green)) return "绿色";
+    if (isSimilarColor(color, QColor(255, 165, 0))) return "橙色";
+    if (isSimilarColor(color, Qt::magenta)) return "紫红色";
+    if (isSimilarColor(color, QColor(255, 192, 203))) return "粉色";
+    if (isSimilarColor(color, Qt::cyan)) return "青色";
+    if (isSimilarColor(color, Qt::black)) return "黑色";
+    if (isSimilarColor(color, Qt::white)) return "白色";
+    return "黑色"; // Default
+}
+
+QList<QString> MainWindow::getAvailableColors() const {
+    return {"红色", "黄色", "绿色", "橙色", "紫红色", "粉色", "青色", "黑色", "白色"};
+}
 // Modified version of createShapeToolbar to include shape-specific property controls
 void MainWindow::createShapeToolbar() {
+
+    QToolBar *fileToolbar = addToolBar(tr("文件操作"));
+
+    QAction *saveAction = fileToolbar->addAction(tr("保存"));
+    connect(saveAction, &QAction::triggered, this, &MainWindow::saveShapesToFile);
+
+    QAction *loadAction = fileToolbar->addAction(tr("加载"));
+    connect(loadAction, &QAction::triggered, this, &MainWindow::loadShapesFromFile);
+
     // Create the shapes dock widget and list (your existing code)
     shapesDock = new QDockWidget(tr("形状工具"), this);
     shapesDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
@@ -1610,10 +1819,35 @@ void MainWindow::createShapeToolbar() {
     QAction *deleteAction = propertiesToolbar->addAction(tr("删除"));
     connect(deleteAction, &QAction::triggered, this, &MainWindow::deleteSelectedShape);
 
-    QAction *colorAction = propertiesToolbar->addAction(tr("更改颜色"));
-    connect(colorAction, &QAction::triggered, this, &MainWindow::changeShapeColor);
+    // QAction *colorAction = propertiesToolbar->addAction(tr("更改颜色"));
+    // connect(colorAction, &QAction::triggered, this, &MainWindow::changeShapeColor);
+    //
+    // propertiesToolbar->addSeparator();
 
-    propertiesToolbar->addSeparator();
+    // Create a widget to hold the color combo box
+    QWidget *colorWidget = new QWidget();
+    QHBoxLayout *colorLayout = new QHBoxLayout(colorWidget);
+    colorLayout->setContentsMargins(5, 0, 5, 0);
+
+    QLabel *colorLabel = new QLabel(tr("颜色:"));
+    colorComboBox = new QComboBox();
+
+    // Populate with available colors
+    for (const QString &colorName : getAvailableColors()) {
+        QPixmap colorBox(16, 16);
+        colorBox.fill(getColorFromName(colorName));
+        colorComboBox->addItem(QIcon(colorBox), colorName);
+    }
+
+    connect(colorComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainWindow::changeShapeColor);
+
+    colorLayout->addWidget(colorLabel);
+    colorLayout->addWidget(colorComboBox);
+
+    // Add the widget to the toolbar
+    propertiesToolbar->addWidget(colorWidget);
+
 
     // Common properties
     QLabel *widthLabel = new QLabel(tr("线宽: "));
@@ -2046,14 +2280,10 @@ void MainWindow::createLayerPanel() {
 
 void MainWindow::changeShapeColor() {
     auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
-    if (!imageLabel || !imageLabel->hasSelectedShape())
-        return;
-
-    QColor currentColor = imageLabel->getSelectedShapeColor();
-    QColor newColor = QColorDialog::getColor(currentColor, this, tr("选择形状颜色"));
-
-    if (newColor.isValid()) {
-        imageLabel->setShapeColor(newColor);
+    if (imageLabel && imageLabel->hasSelectedShape()) {
+        QString colorName = colorComboBox->currentText();
+        QColor color = getColorFromName(colorName);
+        imageLabel->setShapeColor(color);
     }
 }
 

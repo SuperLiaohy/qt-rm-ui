@@ -309,6 +309,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtGui/qwindowdefs.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QCheckBox
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QColorDialog
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QComboBox
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QDockWidget
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QGraphicsItem
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QGraphicsScene
@@ -330,6 +331,7 @@
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qactiongroup.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qcheckbox.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qcolordialog.h
+ mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qcombobox.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qdialog.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qdockwidget.h
  mdp:/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qframe.h
