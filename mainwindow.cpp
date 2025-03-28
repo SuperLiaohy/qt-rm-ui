@@ -2229,7 +2229,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Set up initial window properties
     resize(800, 600);
-    setWindowTitle(tr("图形编辑器"));
+    setWindowTitle(tr("UI编辑器"));
 }
 
 MainWindow::~MainWindow() {
