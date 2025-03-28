@@ -335,12 +335,11 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event) {
             int imgX = x + relX * scaleX;
             int imgY = y + relY * scaleY;
 
-            // Set font size and family
-            QFont font("Arial", shape.specific.intValue.fontSize);
+            // 计算缩放后的字体大小
+            QFont font("Arial", shape.specific.intValue.fontSize * scaleY);  // 使用 scaleY 进行缩放
             painter.setFont(font);
             painter.setPen(QPen(shape.color, shape.borderWidth));
 
-            // Draw the integer value as text
             QString text = QString::number(shape.specific.intValue.value);
             painter.drawText(imgX, imgY, text);
         } else if (shape.type == "浮点数") {
@@ -350,12 +349,11 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event) {
             int imgX = x + relX * scaleX;
             int imgY = y + relY * scaleY;
 
-            // Set font size and family
-            QFont font("Arial", shape.specific.floatValue.fontSize);
+            // 计算缩放后的字体大小
+            QFont font("Arial", shape.specific.floatValue.fontSize * scaleY);  // 使用 scaleY 进行缩放
             painter.setFont(font);
             painter.setPen(QPen(shape.color, shape.borderWidth));
 
-            // Draw the float value as text (divided by 1000)
             double displayValue = shape.specific.floatValue.value / 1000.0;
             QString text = QString::number(displayValue, 'f', 3);
             painter.drawText(imgX, imgY, text);
@@ -366,12 +364,11 @@ void DragDropImageLabel::paintEvent(QPaintEvent *event) {
             int imgX = x + relX * scaleX;
             int imgY = y + relY * scaleY;
 
-            // Set font size and family
-            QFont font("Arial", shape.specific.text.fontSize);
+            // 计算缩放后的字体大小
+            QFont font("Arial", shape.specific.text.fontSize * scaleY);  // 使用 scaleY 进行缩放
             painter.setFont(font);
-            // Set the text color from the shape's color property
             painter.setPen(QPen(shape.color, shape.borderWidth));
-            // Draw the text
+
             QString text = QString::fromUtf8(shape.specific.text.data, shape.specific.text.length);
             painter.drawText(imgX, imgY, text);
         }
