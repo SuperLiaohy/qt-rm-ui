@@ -1789,7 +1789,7 @@ void MainWindow::updatePropertyControls() {
 }
 
 QColor MainWindow::getColorFromName(const QString &colorName) const {
-    if (colorName == "红色") return Qt::red;
+    if (colorName == "红色(己方颜色)") return Qt::red;
     if (colorName == "黄色") return Qt::yellow;
     if (colorName == "绿色") return Qt::green;
     if (colorName == "橙色") return QColor(255, 165, 0);
@@ -1809,7 +1809,7 @@ QString MainWindow::getNameFromColor(const QColor &color) const {
                qAbs(a.blue() - b.blue()) <= tolerance;
     };
 
-    if (isSimilarColor(color, Qt::red)) return "红色";
+    if (isSimilarColor(color, Qt::red)) return "红色(己方颜色)";
     if (isSimilarColor(color, Qt::yellow)) return "黄色";
     if (isSimilarColor(color, Qt::green)) return "绿色";
     if (isSimilarColor(color, QColor(255, 165, 0))) return "橙色";
@@ -1822,7 +1822,7 @@ QString MainWindow::getNameFromColor(const QColor &color) const {
 }
 
 QList<QString> MainWindow::getAvailableColors() const {
-    return {"红色", "黄色", "绿色", "橙色", "紫红色", "粉色", "青色", "黑色", "白色"};
+    return {"红色(己方颜色)", "黄色", "绿色", "橙色", "紫红色", "粉色", "青色", "黑色", "白色"};
 }
 
 // Modified version of createShapeToolbar to include shape-specific property controls
