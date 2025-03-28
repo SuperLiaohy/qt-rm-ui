@@ -15,6 +15,8 @@
 #include <QSpinBox>
 #include <QVBoxLayout>
 #include <cmath>
+#include <QDate>
+#include <QTextStream>
 // DragDropImageLabel 实现
 DragDropImageLabel::DragDropImageLabel(QWidget *parent) : QLabel(parent) {
     setAcceptDrops(true); // 允许接收拖放
@@ -539,7 +541,7 @@ void DragDropImageLabel::mousePressEvent(QMouseEvent *event) {
                 QLineF normal = line.normalVector();
                 normal.translate(clickPos - line.p1());
                 QPointF intersection;
-                line.intersects(normal, &intersection);
+                line.intersect(normal, &intersection);
 
                 qreal distance = QLineF(clickPos, intersection).length();
 
