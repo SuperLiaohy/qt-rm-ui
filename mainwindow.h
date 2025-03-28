@@ -278,7 +278,6 @@ private slots:
 
     void changeTextProperties();
 
-    // ... existing slots ...
     void saveShapesToFile();
 
     void loadShapesFromFile();
