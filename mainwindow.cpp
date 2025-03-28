@@ -1537,7 +1537,7 @@ void MainWindow::exportControlsInfo() {
 
     out << QString::fromUtf8("控件类型统计：\n");
     for (auto it = typeCount.constBegin(); it != typeCount.constEnd(); ++it) {
-        out << "  " << it.key() << ": " << it.value() << " 个\n";
+        out << QString::fromUtf8("  ") << it.key() << QString::fromUtf8(": ") << it.value() << QString::fromUtf8(" 个\n");
     }
     out << "\n";
     // Table header
