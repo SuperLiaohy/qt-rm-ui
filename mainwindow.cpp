@@ -1337,7 +1337,7 @@ void MainWindow::changeRectangleEndPoint(int) {
         imageLabel->getSelectedShapeType() == "矩形") {
         imageLabel->setRectangleEndPoint(
             rectEndXSpinBox->value(),
-            rectEndYSpinBox->value()
+            (1080 - rectEndYSpinBox->value())
         );
     }
 }
@@ -1354,7 +1354,7 @@ void MainWindow::changeLineEndPoint(int) {
     auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape() &&
         imageLabel->getSelectedShapeType() == "直线") {
-        imageLabel->setLineEndPoint(lineEndXSpinBox->value(), lineEndYSpinBox->value());
+        imageLabel->setLineEndPoint(lineEndXSpinBox->value(), (1080-lineEndYSpinBox->value()));
     }
 }
 
@@ -1584,12 +1584,12 @@ void MainWindow::exportControlsInfo() {
     out.setCodec("UTF-8");
 
     // Write header
-    out << "控件信息表\n";
-    out << "==========\n\n";
-    out << "生成时间：" << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") << "\n\n";
+    out << QString::fromUtf8("控件信息表\n");
+    out << QString::fromUtf8("==========\n\n");
+    out << QString::fromUtf8("生成时间：") << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") << "\n\n";
 
     // Summary information
-    out << "控件总数：" << imageLabel->shapes.size() << "\n";
+    out << QString::fromUtf8("控件总数：") << imageLabel->shapes.size() << "\n";
 
     // Count by type
     QMap<QString, int> typeCount;
@@ -1597,14 +1597,13 @@ void MainWindow::exportControlsInfo() {
         typeCount[shape.type]++;
     }
 
-    out << "控件类型统计：\n";
+    out << QString::fromUtf8("控件类型统计：\n");
     for (auto it = typeCount.constBegin(); it != typeCount.constEnd(); ++it) {
         out << "  " << it.key() << ": " << it.value() << " 个\n";
     }
     out << "\n";
-
-    // Table header
-    out << "控件详细信息\n";
+// Table header
+    out << QString::fromUtf8("控件详细信息\n");
     out << "============\n\n";
     out << QString("%1\t%2\t%3\t%4\t%5\t%6\t%7\n")
            .arg("序号", 4)
@@ -1627,7 +1626,7 @@ void MainWindow::exportControlsInfo() {
     // List all controls
     int index = 1;
     for (const auto &shape : imageLabel->shapes) {
-        QString position = QString("(%1,%2)").arg(shape.x).arg(shape.y);
+        QString position = QString("(%1,%2)").arg(shape.x).arg(1080 - shape.y);
         QString colorName = getNameFromColor(shape.color);
         QString specificProps;
 
@@ -1636,11 +1635,11 @@ void MainWindow::exportControlsInfo() {
         } else if (shape.type == "矩形") {
             specificProps = QString("右下角: (%1,%2)")
                              .arg(shape.specific.rect.endX)
-                             .arg(shape.specific.rect.endY);
+                             .arg(1080 - shape.specific.rect.endY);
         } else if (shape.type == "直线") {
             specificProps = QString("终点: (%1,%2)")
                              .arg(shape.specific.line.endX)
-                             .arg(shape.specific.line.endY);
+                             .arg(1080 - shape.specific.line.endY);
         } else if (shape.type == "椭圆") {
             specificProps = QString("半径X: %1, 半径Y: %2")
                              .arg(shape.specific.ellipse.radiusX)
@@ -1712,82 +1711,77 @@ void MainWindow::updatePropertyControls() {
         yPosSpinBox->setEnabled(false);
         layerSpinBox->setEnabled(false);
         shapeSpecificControls->setEnabled(false);
-        return;
-    }
+    } else {
+            // Enable controls
+            widthSpinBox->setEnabled(true);
+            xPosSpinBox->setEnabled(true);
+            yPosSpinBox->setEnabled(true);
+            layerSpinBox->setEnabled(true);
+            shapeSpecificControls->setEnabled(true);
 
+            // Update color combo box
+            colorComboBox->blockSignals(true);
+            QString colorName = getNameFromColor(imageLabel->getSelectedShapeColor());
+            int colorIndex = colorComboBox->findText(colorName);
+            if (colorIndex != -1) {
+                colorComboBox->setCurrentIndex(colorIndex);
+            }
+            colorComboBox->blockSignals(false);
+        // Update controls with current values
+        widthSpinBox->blockSignals(true);
+        xPosSpinBox->blockSignals(true);
+        yPosSpinBox->blockSignals(true);
+        layerSpinBox->blockSignals(true);
 
-    // Enable controls
-    widthSpinBox->setEnabled(true);
-    xPosSpinBox->setEnabled(true);
-    yPosSpinBox->setEnabled(true);
-    layerSpinBox->setEnabled(true);
-    shapeSpecificControls->setEnabled(true);
+        widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
+        xPosSpinBox->setValue(imageLabel->getSelectedShapeX());
+        // Flip Y coordinate for display only (1080 - y)
+        yPosSpinBox->setValue(1080 - imageLabel->getSelectedShapeY());
+        layerSpinBox->setValue(imageLabel->getSelectedShapeLayer());
 
-    // Update color combo box
-    colorComboBox->blockSignals(true);
-    QString colorName = getNameFromColor(imageLabel->getSelectedShapeColor());
-    int colorIndex = colorComboBox->findText(colorName);
-    if (colorIndex != -1) {
-        colorComboBox->setCurrentIndex(colorIndex);
-    }
-    colorComboBox->blockSignals(false);
+        // Other code...
 
-    // Block signals to prevent feedback loop
-    widthSpinBox->blockSignals(true);
-    xPosSpinBox->blockSignals(true);
-    yPosSpinBox->blockSignals(true);
-    layerSpinBox->blockSignals(true);
+        widthSpinBox->blockSignals(false);
+        xPosSpinBox->blockSignals(false);
+        yPosSpinBox->blockSignals(false);
+        layerSpinBox->blockSignals(false);
 
-    // Update controls with current values - using accessor methods
-    widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
-    xPosSpinBox->setValue(imageLabel->getSelectedShapeX());
-    yPosSpinBox->setValue(imageLabel->getSelectedShapeY());
-    layerSpinBox->setValue(imageLabel->getSelectedShapeLayer());
+        // Shape-specific properties
+        QString shapeType = imageLabel->getSelectedShapeType();
 
-    // Re-enable signals
-    widthSpinBox->blockSignals(false);
-    xPosSpinBox->blockSignals(false);
-    yPosSpinBox->blockSignals(false);
-    layerSpinBox->blockSignals(false);
+        if (shapeType == "矩形") {
+            shapeSpecificControls->setCurrentWidget(rectanglePropertiesWidget);
 
-    // Handle shape-specific properties separately
-    QString shapeType = imageLabel->getSelectedShapeType();
+            rectEndXSpinBox->blockSignals(true);
+            rectEndYSpinBox->blockSignals(true);
 
-    if (shapeType == "矩形") {
-        // Set up rectangle-specific controls
-        rectEndXSpinBox->blockSignals(true);
-        rectEndYSpinBox->blockSignals(true);
+            rectEndXSpinBox->setValue(imageLabel->getSelectedShapeEndX());
+            // Flip Y coordinate for end point display
+            rectEndYSpinBox->setValue(1080 - imageLabel->getSelectedShapeEndY());
 
-        rectEndXSpinBox->setValue(imageLabel->getSelectedShapeEndX());
-        rectEndYSpinBox->setValue(imageLabel->getSelectedShapeEndY());
+            rectEndXSpinBox->blockSignals(false);
+            rectEndYSpinBox->blockSignals(false);
+        }  else if (shapeType == "圆形") {
+            // Set up circle-specific controls
+            circleRadiusSpinBox->blockSignals(true);
+            circleRadiusSpinBox->setValue(imageLabel->getSelectedShapeRadius());
+            circleRadiusSpinBox->blockSignals(false);
 
-        rectEndXSpinBox->blockSignals(false);
-        rectEndYSpinBox->blockSignals(false);
+            // Show circle properties panel
+            shapeSpecificControls->setCurrentWidget(circlePropertiesWidget);
+        } else if (shapeType == "直线") {
+            shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
 
-        // Show rectangle properties panel
-        shapeSpecificControls->setCurrentWidget(rectanglePropertiesWidget);
-    } else if (shapeType == "圆形") {
-        // Set up circle-specific controls
-        circleRadiusSpinBox->blockSignals(true);
-        circleRadiusSpinBox->setValue(imageLabel->getSelectedShapeRadius());
-        circleRadiusSpinBox->blockSignals(false);
+            lineEndXSpinBox->blockSignals(true);
+            lineEndYSpinBox->blockSignals(true);
 
-        // Show circle properties panel
-        shapeSpecificControls->setCurrentWidget(circlePropertiesWidget);
-    } else if (shapeType == "直线") {
-        // Set up line-specific controls
-        lineEndXSpinBox->blockSignals(true);
-        lineEndYSpinBox->blockSignals(true);
+            lineEndXSpinBox->setValue(imageLabel->getSelectedShapeEndX());
+            // Flip Y coordinate for end point display
+            lineEndYSpinBox->setValue(1080 - imageLabel->getSelectedShapeEndY());
 
-        lineEndXSpinBox->setValue(imageLabel->getSelectedShapeEndX());
-        lineEndYSpinBox->setValue(imageLabel->getSelectedShapeEndY());
-
-        lineEndXSpinBox->blockSignals(false);
-        lineEndYSpinBox->blockSignals(false);
-
-        // Show line properties panel
-        shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
-    } else if (shapeType == "椭圆") {
+            lineEndXSpinBox->blockSignals(false);
+            lineEndYSpinBox->blockSignals(false);
+        }else if (shapeType == "椭圆") {
         // Set up ellipse-specific controls
         ellipseRadiusXSpinBox->blockSignals(true);
         ellipseRadiusYSpinBox->blockSignals(true);
@@ -1853,6 +1847,158 @@ void MainWindow::updatePropertyControls() {
         textLineEdit->blockSignals(false);
         textFontSizeSpinBox->blockSignals(false);
     }
+
+        // Other shape types...
+    }
+
+    // if (!imageLabel || !imageLabel->hasSelectedShape()) {
+    //     // Disable all controls if no shape is selected
+    //     widthSpinBox->setEnabled(false);
+    //     xPosSpinBox->setEnabled(false);
+    //     yPosSpinBox->setEnabled(false);
+    //     layerSpinBox->setEnabled(false);
+    //     shapeSpecificControls->setEnabled(false);
+    //     return;
+    // }
+    //
+    //
+    // // Enable controls
+    // widthSpinBox->setEnabled(true);
+    // xPosSpinBox->setEnabled(true);
+    // yPosSpinBox->setEnabled(true);
+    // layerSpinBox->setEnabled(true);
+    // shapeSpecificControls->setEnabled(true);
+    //
+    // // Update color combo box
+    // colorComboBox->blockSignals(true);
+    // QString colorName = getNameFromColor(imageLabel->getSelectedShapeColor());
+    // int colorIndex = colorComboBox->findText(colorName);
+    // if (colorIndex != -1) {
+    //     colorComboBox->setCurrentIndex(colorIndex);
+    // }
+    // colorComboBox->blockSignals(false);
+    //
+    // // Block signals to prevent feedback loop
+    // widthSpinBox->blockSignals(true);
+    // xPosSpinBox->blockSignals(true);
+    // yPosSpinBox->blockSignals(true);
+    // layerSpinBox->blockSignals(true);
+    //
+    // // Update controls with current values - using accessor methods
+    // widthSpinBox->setValue(imageLabel->getSelectedShapeBorderWidth());
+    // xPosSpinBox->setValue(imageLabel->getSelectedShapeX());
+    // yPosSpinBox->setValue(imageLabel->getSelectedShapeY());
+    // layerSpinBox->setValue(imageLabel->getSelectedShapeLayer());
+    //
+    // // Re-enable signals
+    // widthSpinBox->blockSignals(false);
+    // xPosSpinBox->blockSignals(false);
+    // yPosSpinBox->blockSignals(false);
+    // layerSpinBox->blockSignals(false);
+    //
+    // // Handle shape-specific properties separately
+    // QString shapeType = imageLabel->getSelectedShapeType();
+    //
+    // if (shapeType == "矩形") {
+    //     // Set up rectangle-specific controls
+    //     rectEndXSpinBox->blockSignals(true);
+    //     rectEndYSpinBox->blockSignals(true);
+    //
+    //     rectEndXSpinBox->setValue(imageLabel->getSelectedShapeEndX());
+    //     rectEndYSpinBox->setValue(imageLabel->getSelectedShapeEndY());
+    //
+    //     rectEndXSpinBox->blockSignals(false);
+    //     rectEndYSpinBox->blockSignals(false);
+    //
+    //     // Show rectangle properties panel
+    //     shapeSpecificControls->setCurrentWidget(rectanglePropertiesWidget);
+    // } else if (shapeType == "圆形") {
+    //     // Set up circle-specific controls
+    //     circleRadiusSpinBox->blockSignals(true);
+    //     circleRadiusSpinBox->setValue(imageLabel->getSelectedShapeRadius());
+    //     circleRadiusSpinBox->blockSignals(false);
+    //
+    //     // Show circle properties panel
+    //     shapeSpecificControls->setCurrentWidget(circlePropertiesWidget);
+    // } else if (shapeType == "直线") {
+    //     // Set up line-specific controls
+    //     lineEndXSpinBox->blockSignals(true);
+    //     lineEndYSpinBox->blockSignals(true);
+    //
+    //     lineEndXSpinBox->setValue(imageLabel->getSelectedShapeEndX());
+    //     lineEndYSpinBox->setValue(imageLabel->getSelectedShapeEndY());
+    //
+    //     lineEndXSpinBox->blockSignals(false);
+    //     lineEndYSpinBox->blockSignals(false);
+    //
+    //     // Show line properties panel
+    //     shapeSpecificControls->setCurrentWidget(linePropertiesWidget);
+    // } else if (shapeType == "椭圆") {
+    //     // Set up ellipse-specific controls
+    //     ellipseRadiusXSpinBox->blockSignals(true);
+    //     ellipseRadiusYSpinBox->blockSignals(true);
+    //
+    //     ellipseRadiusXSpinBox->setValue(imageLabel->getSelectedShapeRadiusX());
+    //     ellipseRadiusYSpinBox->setValue(imageLabel->getSelectedShapeRadiusY());
+    //
+    //     ellipseRadiusXSpinBox->blockSignals(false);
+    //     ellipseRadiusYSpinBox->blockSignals(false);
+    //
+    //     // Show ellipse properties panel
+    //     shapeSpecificControls->setCurrentWidget(ellipsePropertiesWidget);
+    // } else if (shapeType == "圆弧") {
+    //     // Set up arc-specific controls
+    //     arcRadiusXSpinBox->blockSignals(true);
+    //     arcRadiusYSpinBox->blockSignals(true);
+    //     arcStartAngleSpinBox->blockSignals(true);
+    //     arcSpanAngleSpinBox->blockSignals(true);
+    //
+    //     arcRadiusXSpinBox->setValue(imageLabel->getSelectedShapeArcRadiusX());
+    //     arcRadiusYSpinBox->setValue(imageLabel->getSelectedShapeArcRadiusY());
+    //     arcStartAngleSpinBox->setValue(imageLabel->getSelectedShapeArcStartAngle());
+    //     arcSpanAngleSpinBox->setValue(imageLabel->getSelectedShapeArcSpanAngle());
+    //
+    //     arcRadiusXSpinBox->blockSignals(false);
+    //     arcRadiusYSpinBox->blockSignals(false);
+    //     arcStartAngleSpinBox->blockSignals(false);
+    //     arcSpanAngleSpinBox->blockSignals(false);
+    //
+    //     // Show arc properties panel
+    //     shapeSpecificControls->setCurrentWidget(arcPropertiesWidget);
+    // } else if (shapeType == "整数") {
+    //     shapeSpecificControls->setCurrentWidget(intValuePropertiesWidget);
+    //
+    //     intValueSpinBox->blockSignals(true);
+    //     intFontSizeSpinBox->blockSignals(true);
+    //
+    //     intValueSpinBox->setValue(imageLabel->getSelectedShapeIntValue());
+    //     intFontSizeSpinBox->setValue(imageLabel->getSelectedShapeIntFontSize());
+    //
+    //     intValueSpinBox->blockSignals(false);
+    //     intFontSizeSpinBox->blockSignals(false);
+    // } else if (shapeType == "浮点数") {
+    //     shapeSpecificControls->setCurrentWidget(floatValuePropertiesWidget);
+    //
+    //     floatValueSpinBox->blockSignals(true);
+    //     floatFontSizeSpinBox->blockSignals(true);
+    //
+    //     floatValueSpinBox->setValue(imageLabel->getSelectedShapeFloatValue());
+    //     floatFontSizeSpinBox->setValue(imageLabel->getSelectedShapeFloatFontSize());
+    //
+    //     floatValueSpinBox->blockSignals(false);
+    //     floatFontSizeSpinBox->blockSignals(false);
+    // }     else if (shapeType == "文本字符") {
+    //     shapeSpecificControls->setCurrentWidget(textPropertiesWidget);
+    //
+    //     textLineEdit->blockSignals(true);
+    //     textFontSizeSpinBox->blockSignals(true);
+    //
+    //     textLineEdit->setText(imageLabel->getSelectedShapeText());
+    //     textFontSizeSpinBox->setValue(imageLabel->getSelectedShapeTextFontSize());
+    //
+    //     textLineEdit->blockSignals(false);
+    //     textFontSizeSpinBox->blockSignals(false);
+    // }
 }
 QColor MainWindow::getColorFromName(const QString &colorName) const {
     if (colorName == "红色") return Qt::red;
@@ -2014,7 +2160,13 @@ void MainWindow::createShapeToolbar() {
     yPosSpinBox = new QSpinBox();
     yPosSpinBox->setRange(0, 1080);
     yPosSpinBox->setSingleStep(1);
+    yPosSpinBox->setToolTip(tr("Y坐标 (0为底部，1080为顶部)"));
     propertiesToolbar->addWidget(yPosSpinBox);
+
+    // yPosSpinBox = new QSpinBox();
+    // yPosSpinBox->setRange(0, 1080);
+    // yPosSpinBox->setSingleStep(1);
+    // propertiesToolbar->addWidget(yPosSpinBox);
     connect(yPosSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &MainWindow::changeShapePosition);
 
@@ -2050,18 +2202,29 @@ void MainWindow::createShapeToolbar() {
     connect(rectEndXSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &MainWindow::changeRectangleEndPoint);
 
+
     QLabel *rectEndYLabel = new QLabel(tr("终点Y坐标:"));
     rectEndYSpinBox = new QSpinBox();
     rectEndYSpinBox->setRange(0, 1080);
     rectEndYSpinBox->setSingleStep(1);
+    rectEndYSpinBox->setToolTip(tr("Y坐标 (0为底部，1080为顶部)"));
+
+    // QLabel *rectEndYLabel = new QLabel(tr("终点Y坐标:"));
+    // rectEndYSpinBox = new QSpinBox();
+    // rectEndYSpinBox->setRange(0, 1080);
+    // rectEndYSpinBox->setSingleStep(1);
     connect(rectEndYSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &MainWindow::changeRectangleEndPoint);
+
+
 
     rectLayout->addWidget(rectEndXLabel);
     rectLayout->addWidget(rectEndXSpinBox);
     rectLayout->addWidget(rectEndYLabel);
     rectLayout->addWidget(rectEndYSpinBox);
     rectLayout->addStretch();
+
+
 
     // Circle properties
     circlePropertiesWidget = new QWidget();
@@ -2095,6 +2258,12 @@ void MainWindow::createShapeToolbar() {
     lineEndYSpinBox = new QSpinBox();
     lineEndYSpinBox->setRange(0, 1080);
     lineEndYSpinBox->setSingleStep(1);
+    lineEndYSpinBox->setToolTip(tr("Y坐标 (0为底部，1080为顶部)"));
+
+    // QLabel *lineEndYLabel = new QLabel(tr("终点Y坐标:"));
+    // lineEndYSpinBox = new QSpinBox();
+    // lineEndYSpinBox->setRange(0, 1080);
+    // lineEndYSpinBox->setSingleStep(1);
     connect(lineEndYSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &MainWindow::changeLineEndPoint);
 
@@ -2447,7 +2616,7 @@ void MainWindow::changeBorderWidth(int width) {
 void MainWindow::changeShapePosition(int) {
     auto *imageLabel = dynamic_cast<DragDropImageLabel *>(this->imageLabel);
     if (imageLabel && imageLabel->hasSelectedShape()) {
-        imageLabel->setShapePosition(xPosSpinBox->value(), yPosSpinBox->value());
+        imageLabel->setShapePosition(xPosSpinBox->value(), (1080 - yPosSpinBox->value()));
     }
 }
 
